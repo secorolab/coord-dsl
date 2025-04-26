@@ -1,0 +1,143 @@
+{
+    "states": [
+        "START",
+        "CONFIGURE",
+        "IDLE",
+        "COMPILE",
+        "EXECUTE",
+        "EXIT",
+        "NUM_STATES"
+    ],
+    "start_state": "START",
+    "current_state": "START",
+    "end_state": "EXIT",
+    "events": [
+        "E_CONFIGURE_ENTERED",
+        "E_CONFIGURE_EXIT",
+        "E_IDLE_ENTERED",
+        "E_IDLE_EXIT_EXECUTE",
+        "E_IDLE_EXIT_COMPILE",
+        "E_COMPILE_ENTERED",
+        "E_COMPILE_EXIT",
+        "E_EXECUTE_ENTERED",
+        "E_STEP",
+        "NUM_EVENTS"
+    ],
+    "transitions": [
+        "T_START_CONFIGURE",
+        "T_CONFIGURE_IDLE",
+        "T_IDLE_IDLE",
+        "T_IDLE_EXECUTE",
+        "T_IDLE_COMPILE",
+        "T_COMPILE_EXECUTE",
+        "T_EXECUTE_EXECUTE",
+        "NUM_TRANSITIONS"
+    ],
+    "reactions": [
+        "E_STEP",
+        "E_CONFIGURE_EXIT",
+        "E_STEP",
+        "E_IDLE_EXIT_EXECUTE",
+        "E_IDLE_EXIT_COMPILE",
+        "E_COMPILE_EXIT",
+        "E_STEP",
+        "NUM_REACTIONS"
+    ],
+    "transitions_table": {
+        "T_START_CONFIGURE": {
+            "from": "START",
+            "to": "CONFIGURE",
+            "fires": [
+                "E_CONFIGURE_ENTERED"
+            ],
+            "num_fires": 1
+        },
+        "T_CONFIGURE_IDLE": {
+            "from": "CONFIGURE",
+            "to": "IDLE",
+            "fires": [
+                "E_IDLE_ENTERED"
+            ],
+            "num_fires": 1
+        },
+        "T_IDLE_IDLE": {
+            "from": "IDLE",
+            "to": "IDLE",
+            "fires": [
+                "E_IDLE_ENTERED"
+            ],
+            "num_fires": 1
+        },
+        "T_IDLE_EXECUTE": {
+            "from": "IDLE",
+            "to": "EXECUTE",
+            "fires": [
+                "E_EXECUTE_ENTERED"
+            ],
+            "num_fires": 1
+        },
+        "T_IDLE_COMPILE": {
+            "from": "IDLE",
+            "to": "COMPILE",
+            "fires": [
+                "E_COMPILE_ENTERED"
+            ],
+            "num_fires": 1
+        },
+        "T_COMPILE_EXECUTE": {
+            "from": "COMPILE",
+            "to": "EXECUTE",
+            "fires": [
+                "E_EXECUTE_ENTERED"
+            ],
+            "num_fires": 1
+        },
+        "T_EXECUTE_EXECUTE": {
+            "from": "EXECUTE",
+            "to": "EXECUTE",
+            "fires": [
+                "E_EXECUTE_ENTERED"
+            ],
+            "num_fires": 1
+        }
+    },
+    "reactions_table": {
+        "R_E_STEP": {
+            "when": "E_STEP",
+            "transitions": [
+                "T_START_CONFIGURE",
+                "T_IDLE_IDLE",
+                "T_EXECUTE_EXECUTE"
+            ],
+            "num_transitions": 3
+        },
+        "R_E_CONFIGURE_EXIT": {
+            "when": "E_CONFIGURE_EXIT",
+            "transitions": [
+                "T_CONFIGURE_IDLE"
+            ],
+            "num_transitions": 1
+        },
+        "R_E_IDLE_EXIT_EXECUTE": {
+            "when": "E_IDLE_EXIT_EXECUTE",
+            "transitions": [
+                "T_IDLE_EXECUTE"
+            ],
+            "num_transitions": 1
+        },
+        "R_E_IDLE_EXIT_COMPILE": {
+            "when": "E_IDLE_EXIT_COMPILE",
+            "transitions": [
+                "T_IDLE_COMPILE"
+            ],
+            "num_transitions": 1
+        },
+        "R_E_COMPILE_EXIT": {
+            "when": "E_COMPILE_EXIT",
+            "transitions": [
+                "T_COMPILE_EXECUTE"
+            ],
+            "num_transitions": 1
+        }
+    }
+}

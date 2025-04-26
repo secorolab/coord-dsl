@@ -1,0 +1,29 @@
+FSM:
+	"STATES" ":" states+=State[',']
+	"START_STATE" ":" start_state=[State]
+	"CURRENT_STATE" ":" current_state=[State]
+	"END_STATE" ":" end_state=[State]
+	"EVENTS" ":" events+=Event[',']
+	"TRANSITIONS" ":" transitions+=Transition
+;
+
+State:
+	name = /([A-Z_][A-Z0-9_]*)/
+;
+
+Event:
+    name=/[A-Z_][A-Z0-9_]*/
+;
+
+Transition:
+	name=ID ":"
+		"FROM" ":" from_state=[State]
+		"TO" ":" to_state=[State]
+		"WHEN" ":" when=[Event]
+		("FIRES" ":" fires+=[Event] [','])?
+
+;
+
+Comment:
+	(/\/\/.*$/ | /(?ms)\/\*(.*?)\*\//)
+;
