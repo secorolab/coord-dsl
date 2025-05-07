@@ -4,3 +4,4 @@ pyld
 pyshacl
 jinja2
 py_trees
+textX

@@ -1,37 +1,34 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
 [project]
 name = "coord_dsl"
-version = "0.0.1"
-authors = [
-    { name="Minh Nguyen", email="minh@mail.minhnh.com" }
-]
-description = """
-A Domain-Specific Language (DSL) to execute simple coordination models.
-"""
+version = "0.1.0"
+description = "A Domain-Specific Language (DSL) to execute simple coordination models."
+authors = [{ name = "", email = "vamsi.kalagautur@uni-bremen.de" }]
+license = { text = "MIT" }
+keywords = [""]
 readme = "README.md"
-requires-python = ">=3.9"
-classifiers = [
-    "Programming Language :: Python :: 3",
-    "Development Status :: 2 - Pre-Alpha",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)"
-]
+requires-python = ">=3.7"
 dependencies = [
-  'numpy',
-  'rdflib',
-  'pyld',
-  'pyshacl',
-  'jinja2',
-  'py_trees',
+    "textX>=4.1.0",
+    "textx_ls_core"
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/minhnh/coord-dsl"
+"Homepage" = "https://github.com/secorolab/coord-dsl.git"
 
-[tool.ruff]
-line-length = 100
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
 
-[tool.black]
-line-length = 100
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"coord_dsl" = ["*.tx"]
+
+[project.entry-points."textx_languages"]
+"fsm" = "coord_dsl:fsm_meta"
+
+[project.entry-points."textx_generators"]
+"fsm_json" = "coord_dsl.generators.fsm_gen:fsm_json_gen"
+"fsm_cpp" = "coord_dsl.generators.fsm_gen:fsm_cpp_gen"
+"fsm_console" = "coord_dsl.generators.fsm_gen:fsm_console_gen"
