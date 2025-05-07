@@ -3,7 +3,7 @@
 ## Install
 
 ```bash
-pip install coord-dsl
+pip install coord_dsl
 ```
 
 ### Editable Install
@@ -27,6 +27,10 @@ A state machine definition has the following main sections:
 
 ### Example
 ```yaml
+NAME: example_fsm
+
+DESCRIPTION: Example FSM
+
 STATES: S_START,S_STATE1,S_STATE2,S_EXIT
 
 START_STATE: S_START
