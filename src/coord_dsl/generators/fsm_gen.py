@@ -67,6 +67,7 @@ def parse_fsm(model):
 
 @generator("fsm", "console")
 def fsm_console_gen(metamodel, model, output_path, overwrite, debug, **custom_args):
+    """Prints the FSM datastructures to the console"""
     print("Generating FSM...")
 
     fsm = parse_fsm(model)
@@ -76,6 +77,8 @@ def fsm_console_gen(metamodel, model, output_path, overwrite, debug, **custom_ar
 
 @generator("fsm", "cpp")
 def fsm_cpp_gen(metamodel, model, output_path, overwrite, debug, **custom_args):
+    """Generates a .hpp file with the FSM datastructures"""
+
     print("Generating C code for FSM...")
 
     # get module path
@@ -103,6 +106,8 @@ def fsm_cpp_gen(metamodel, model, output_path, overwrite, debug, **custom_args):
 
 @generator("fsm", "json")
 def fsm_json_gen(metamodel, model, output_path, overwrite, debug, **custom_args):
+    """Generates a .json file with the FSM datastructures"""
+
     print("Generating JSON for FSM...")
 
     fsm = parse_fsm(model)

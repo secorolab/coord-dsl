@@ -1,0 +1,34 @@
+[project]
+name = "coord_dsl"
+version = "0.1.0"
+description = "A Domain-Specific Language (DSL) to execute simple coordination models."
+authors = [{ name = "", email = "vamsi.kalagautur@uni-bremen.de" }]
+license = { text = "MIT" }
+keywords = [""]
+readme = "README.md"
+requires-python = ">=3.7"
+dependencies = [
+    "textX>=4.1.0",
+    "textx_ls_core"
+]
+
+[project.urls]
+"Homepage" = "https://github.com/secorolab/coord-dsl.git"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"coord_dsl" = ["*.tx"]
+
+[project.entry-points."textx_languages"]
+"fsm" = "coord_dsl:fsm_meta"
+
+[project.entry-points."textx_generators"]
+"fsm_json" = "coord_dsl.generators.fsm_gen:fsm_json_gen"
+"fsm_cpp" = "coord_dsl.generators.fsm_gen:fsm_cpp_gen"
+"fsm_console" = "coord_dsl.generators.fsm_gen:fsm_console_gen"
