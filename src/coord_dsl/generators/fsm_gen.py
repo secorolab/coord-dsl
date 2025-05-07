@@ -1,5 +1,4 @@
 import json
-from coord_dsl import fsm_meta_model as fsm_meta
 from dataclasses import dataclass, field
 from textx import generator
 from jinja2 import Environment, FileSystemLoader
@@ -8,6 +7,8 @@ from pathlib import Path
 
 @dataclass
 class FSMData:
+    name: str = ""
+    description: str = ""
     states: list = field(default_factory=list)
     start_state: str = ""
     current_state: str = ""
@@ -21,6 +22,8 @@ class FSMData:
     def to_json(self):
         return json.dumps(
             {
+                "name": self.name,
+                "description": self.description,
                 "states": self.states,
                 "start_state": self.start_state,
                 "current_state": self.current_state,
@@ -37,6 +40,9 @@ class FSMData:
 
 def parse_fsm(model):
     fsm = FSMData()
+
+    fsm.name = model.name
+    fsm.description = model.description
 
     fsm.states = [state.name for state in model.states]
 
@@ -58,8 +64,8 @@ def parse_fsm(model):
         fsm.reactions_table[reaction.name] = {
             "when": reaction.when.name,
             "do": reaction.do.name,
-            "fires": [event.name for event in reaction.fires],
             "num_fires": len(reaction.fires),
+            "fires": [event.name for event in reaction.fires] if len(reaction.fires) > 0 else None,
         }
 
     return fsm
@@ -68,7 +74,7 @@ def parse_fsm(model):
 @generator("fsm", "console")
 def fsm_console_gen(metamodel, model, output_path, overwrite, debug, **custom_args):
     """Prints the FSM datastructures to the console"""
-    print("Generating FSM...")
+    print(f"Generating FSM: {model.name}")
 
     fsm = parse_fsm(model)
 
@@ -79,7 +85,7 @@ def fsm_console_gen(metamodel, model, output_path, overwrite, debug, **custom_ar
 def fsm_cpp_gen(metamodel, model, output_path, overwrite, debug, **custom_args):
     """Generates a .hpp file with the FSM datastructures"""
 
-    print("Generating C code for FSM...")
+    print(f"Generating C code for FSM: {model.name}")
 
     # get module path
     module_path = Path(__file__).parent.parent
@@ -88,17 +94,18 @@ def fsm_cpp_gen(metamodel, model, output_path, overwrite, debug, **custom_args):
 
     fsm = parse_fsm(model)
 
-    filename = model._tx_filename.split("/")[-1].split(".")[0]
+    fsm_name = model.name
 
     output = template.render(
         {
-            "fsm_name": filename,
             "data": fsm,
         }
     )
 
     if not output_path:
-        output_path = f"{model._tx_filename}.hpp"
+        model_path = Path(model._tx_filename).parent
+        output_path = f"{model_path}/{fsm_name}.fsm.hpp"
+
     with open(output_path, "w") as f:
         f.write(output)
     print(f"FSM C code generated at {output_path}")
@@ -108,34 +115,14 @@ def fsm_cpp_gen(metamodel, model, output_path, overwrite, debug, **custom_args):
 def fsm_json_gen(metamodel, model, output_path, overwrite, debug, **custom_args):
     """Generates a .json file with the FSM datastructures"""
 
-    print("Generating JSON for FSM...")
+    print(f"Generating JSON for FSM: {model.name}")
 
     fsm = parse_fsm(model)
 
     if not output_path:
-        output_path = f"{model._tx_filename}.json"
+        model_path = Path(model._tx_filename).parent
+        output_path = f"{model_path}/{model.name}.fsm.json"
 
     with open(output_path, "w") as f:
         f.write(fsm.to_json())
     print(f"FSM JSON generated at {output_path}")
-
-
-if __name__ == "__main__":
-    model = fsm_meta.model_from_file("../models/program.fsm")
-
-    fsm = parse_fsm(model)
-
-    # convert the FSM object to a dictionary
-    fsm_dict = {
-        "states": list(fsm.states),
-        "start_state": fsm.start_state,
-        "current_state": fsm.current_state,
-        "end_state": fsm.end_state,
-        "events": list(fsm.events),
-        "transitions": list(fsm.transitions),
-        "reactions": list(fsm.reactions),
-        "transitions_table": fsm.transitions_table,
-        "reactions_table": fsm.reactions_table,
-    }
-
-    print(json.dumps(fsm_dict, indent=4))

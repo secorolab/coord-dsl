@@ -1,50 +1,53 @@
 /*
  * This is an auto-generated file. Do not edit it directly.
+ * 
+ * FSM: {{ data.name }}
+ * FSM Description: {{ data.description }}
  *
  * -----------------------------------------------------
  * Usage example:
  * -----------------------------------------------------
 
-#include "{{ fsm_name }}.hpp"
+#include "{{ data.name }}.fsm.hpp"
 
 struct user_data {
-	
+
 };
 
 void yyyy_behavior(struct user_data *userData, struct events *eventData) {
-	... do something
+    // ... do something
 
-	produce_event(eventData, E_ZZZZ);
+    produce_event(eventData, E_ZZZZ);
 }
 
 void fsm_behavior(struct events *eventData, struct user_data *userData) {
-	if (consume_event(eventData, E_XXXX)) {
-		yyyy_behavior(userData, eventData);
-	}
-	...
+    if (consume_event(eventData, E_XXXX)) {
+        yyyy_behavior(userData, eventData);
+    }
+    ...
 }
 
 int main() {
 
-	struct user_data userData = {};
+    struct user_data userData = {};
 
-	while (true) {
-		produce_event(fsm.eventData, E_STEP);
+    while (true) {
+        produce_event(fsm.eventData, E_STEP);
 
-		// run state machine, event loop
-		fsm_behavior(fsm.eventData, &userData);
-		fsm_step_nbx(&fsm);
-		reconfig_event_buffers(&eventData);
-	}
+        // run state machine, event loop
+        fsm_behavior(fsm.eventData, &userData);
+        fsm_step_nbx(&fsm);
+        reconfig_event_buffers(&eventData);
+    }
 
-	return 0;
+    return 0;
 }
 
  * -----------------------------------------------------
  */
 
-#ifndef {{ fsm_name.upper() }}_FSM_HPP
-#define {{ fsm_name.upper()  }}_FSM_HPP
+#ifndef {{ data.name.upper() }}_FSM_HPP
+#define {{ data.name.upper()  }}_FSM_HPP
 
 #include "coord2b/functions/fsm.h"
 #include "coord2b/functions/event_loop.h"
@@ -52,89 +55,93 @@ int main() {
 // sm states
 enum e_states {
 {%- for state in data.states %}
-	{{ state }}{% if loop.first %} = 0{% endif %},
+    {{ state }}{% if loop.first %} = 0{% endif %},
 {%- endfor %}
-	NUM_STATES
+    NUM_STATES
 };
 
 // sm events
 enum e_events {
 {%- for event in data.events %}
-	{{ event }}{% if loop.first %} = 0{% endif %},
+    {{ event }}{% if loop.first %} = 0{% endif %},
 {%- endfor %}
-	NUM_EVENTS
+    NUM_EVENTS
 };
 
 // sm transitions
 enum e_transitions {
 {%- for transition in data.transitions %}
-	{{ transition }}{% if loop.first %} = 0{% endif %},
+    {{ transition }}{% if loop.first %} = 0{% endif %},
 {%- endfor %}
-	NUM_TRANSITIONS
+    NUM_TRANSITIONS
 };
 
 // sm reactions
 enum e_reactions {
 {%- for reaction in data.reactions %}
-	{{ reaction }}{% if loop.first %} = 0{% endif %},
+    {{ reaction }}{% if loop.first %} = 0{% endif %},
 {%- endfor %}
-	NUM_REACTIONS
+    NUM_REACTIONS
 };
 
 // sm states
 inline struct state states[NUM_STATES] = {
 {%- for state in data.states %}
-	{.name = "{{ state.capitalize() }}"}{% if loop.last %} {% else %}, {% endif %}
+    {.name = "{{ state.capitalize() }}"}{% if loop.last %} {% else %}, {% endif %}
 {%- endfor %}
 };
 
 // sm transition table
 inline struct transition transitions[NUM_TRANSITIONS] = {
 {%- for _, transition in data.transitions_table.items() %}
-	{
-		.startStateIndex = {{ transition.from }},
-		.endStateIndex = {{ transition.to }},
-	}{% if loop.last %} {% else %}, {% endif %}
+    {
+        .startStateIndex = {{ transition.from }},
+        .endStateIndex = {{ transition.to }},
+    }{% if loop.last %} {% else %}, {% endif %}
 {%- endfor %}
 };
 
 // sm reaction table
 inline struct event_reaction reactions[NUM_REACTIONS] = {
 {%- for _, reaction in data.reactions_table.items() %}
-	{
-		.conditionEventIndex = {{ reaction.when }},
-		.transitionIndex = {{ reaction.do }},
-		.numFiredEvents = {{ reaction.num_fires }},
-		.firedEventIndices = new unsigned int[{{ reaction.num_fires }}]{
+    {
+        .conditionEventIndex = {{ reaction.when }},
+        .transitionIndex = {{ reaction.do }},
+        .numFiredEvents = {{ reaction.num_fires }},
+{%- if reaction.fires %}
+        .firedEventIndices = new unsigned int[{{ reaction.num_fires }}]{
 {%- for event in reaction.fires %}
-			{{ event }}{% if loop.last %} {% else %}, {% endif %}
+            {{ event }}{% if loop.last %} {% else %}, {% endif %}
 {%- endfor %}
-		},
-	}{% if loop.last %} {% else %}, {% endif %}
+        },
+{%- else %}
+        .firedEventIndices = nullptr,
+{% endif %}
+    }{% if loop.last %} {% else %}, {% endif %}
 {%- endfor %}
 };
 
 // sm event data
 inline struct events eventData = {
-	.numEvents = NUM_EVENTS,
-	.currentEvents = new _Bool[NUM_EVENTS]{false},
-	.futureEvents = new _Bool[NUM_EVENTS]{false},
+    .numEvents = NUM_EVENTS,
+    .currentEvents = new _Bool[NUM_EVENTS]{false},
+    .futureEvents = new _Bool[NUM_EVENTS]{false},
 };
 
 // sm fsm struct
 inline struct fsm_nbx fsm = {
-	.numReactions = NUM_REACTIONS,
-	.numTransitions = NUM_TRANSITIONS,
-	.numStates = NUM_STATES,
+    .numReactions = NUM_REACTIONS,
+    .numTransitions = NUM_TRANSITIONS,
+    .numStates = NUM_STATES,
 
-	.states = states,
-	.startStateIndex = {{ data.start_state }},
-	.endStateIndex = {{ data.end_state }},
-	.currentStateIndex = {{ data.current_state }},
+    .states = states,
+    .startStateIndex = {{ data.start_state }},
+    .endStateIndex = {{ data.end_state }},
+    .currentStateIndex = {{ data.current_state }},
 
-	.eventData = &eventData,
-	.reactions = reactions,
-	.transitions = transitions,
+    .eventData = &eventData,
+    .reactions = reactions,
+    .transitions = transitions,
 };
 
-#endif // {{ fsm_name.upper()  }}_FSM_HPP
+#endif // {{ data.name.upper()  }}_FSM_HPP
