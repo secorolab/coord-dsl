@@ -104,3 +104,8 @@ textx generate model.fsm --target cpp -o model.hpp
     - `cpp`: A C++ header file.
     - `json`: JSON file.
     - `console`: Console output.
+
+### Execution
+
+- The generated header file is dependent on the [coord2b](https://github.com/rosym-project/coord2b) library.
+- The [traffic_lights.c](https://github.com/rosym-project/coord2b/blob/master/src/example/traffic_lights.c) example is a good starting point to understand how to use the generated data structures.
