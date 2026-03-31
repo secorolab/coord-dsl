@@ -77,6 +77,23 @@ REACTIONS:
         DO: @T_STATE2_EXIT
 ```
 
+#### Graph requirements
+
+* A `namespace` is required for the FSM model, when targeting a `graph` output.
+* Below are the ways to specify the `namespace` for the graph output:
+  ```yaml
+  ns hello="https://example.com/fsm"
+
+  NAME: (ns=hello) example-fsm
+  ```
+
+  or
+
+  ```yaml
+  ns hello="https://example.com/fsm"
+
+  NAME: hello.example-fsm
+
 ##### States
 
 * States represent the different behaviors of an activity.
@@ -115,8 +132,10 @@ REACTIONS:
 #### Code Generation
 
 ```bash
-textx generate model.fsm --target cpp -o model.hpp
-textx generate model.fsm --target py -o model.py
+textx generate example.fsm --target cpp -o model.hpp
+textx generate example.fsm --target py -o model.py
+textx generate example.fsm --target graph --format json-ld --autocompact
+textx generate example.fsm --target console --format ttl --autocompact
 ```
 
 * Generates a C++ header file with the data structures required for the FSM, along with a sample implementation code.
@@ -127,7 +146,13 @@ textx generate model.fsm --target py -o model.py
   - `cpp`: A C++ header file.
   - `py`: A Python module.
   - `json`: JSON file.
+  - graph: A graph representation of the FSM in formats [json-ld, ttl, xml].
   - `console`: Console output.
+* Available formats for graph and console targets through the `--format` option:
+  - `json-ld`: JSON-LD format.
+  - `ttl`: Turtle format.
+  - `xml`: XML format.
+* The `--autocompact` option can be used to automatically compact the generated graph using the namespace defined in the FSM model.
 
 #### Execution
 

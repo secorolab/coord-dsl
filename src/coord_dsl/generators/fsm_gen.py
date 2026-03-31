@@ -3,11 +3,18 @@ from dataclasses import dataclass, field
 from textx import generator
 from jinja2 import Environment, FileSystemLoader
 from pathlib import Path
+from rdflib import Graph, Namespace, Literal, RDF, XSD
+from rdf_utils.uri import URL_SECORO_MM
+
+
+__GRAPH_FORMAT_EXT = {"json-ld": "json", "ttl": "ttl", "xml": "xml"}
 
 
 @dataclass
 class FSMData:
     name: str = ""
+    ns: str = ""
+    ns_uri: str = ""
     description: str = ""
     states: list = field(default_factory=list)
     start_state: str = ""
@@ -41,7 +48,7 @@ class FSMData:
 def parse_fsm(model):
     fsm = FSMData()
 
-    fsm.name = model.name
+    fsm.name = model.name.local
     fsm.description = model.description
 
     fsm.states = [state.name for state in model.states]
@@ -73,18 +80,145 @@ def parse_fsm(model):
     return fsm
 
 
+def get_fsm_graph(fsm: FSMData, **kwargs):
+    g = Graph()
+
+    URI_MM_FSM = f"{URL_SECORO_MM}/behaviour/fsm#"
+    URI_MM_EL = f"{URL_SECORO_MM}/behaviour/event_loop#"
+
+    NS_FSM = Namespace(URI_MM_FSM)
+    NS_EL = Namespace(URI_MM_EL)
+
+    URI_M_FSM = f"{fsm.ns_uri}#"
+    NS_M_FSM = Namespace(URI_M_FSM)
+
+    g.bind("fsm", NS_FSM)
+    g.bind("el", NS_EL)
+    g.bind(fsm.ns, NS_M_FSM)
+
+    name = fsm.name
+
+    g.add((NS_M_FSM[name], RDF.type, NS_FSM.FSM))
+    g.add((NS_M_FSM[name], NS_FSM.name, Literal(name)))
+    g.add((NS_M_FSM[name], NS_FSM.description, Literal(fsm.description)))
+
+    g.add((NS_M_FSM[name], NS_FSM["start-state"], NS_M_FSM[fsm.start_state]))
+    g.add((NS_M_FSM[name], NS_FSM["end-state"], NS_M_FSM[fsm.end_state]))
+    g.add((NS_M_FSM[name], NS_FSM["current-state"], NS_M_FSM[fsm.current_state]))
+
+    for state in fsm.states:
+        g.add((NS_M_FSM[state], RDF.type, NS_FSM.State))
+        g.add((NS_M_FSM[name], NS_FSM.states, NS_M_FSM[state]))
+
+    for event in fsm.events:
+        g.add((NS_M_FSM[event], RDF.type, NS_EL.Event))
+        g.add((NS_M_FSM[name], NS_FSM.events, NS_M_FSM[event]))
+
+    for transition in fsm.transitions:
+        g.add((NS_M_FSM[transition], RDF.type, NS_FSM.Transition))
+        g.add((NS_M_FSM[name], NS_FSM.transitions, NS_M_FSM[transition]))
+
+        from_state = fsm.transitions_table[transition]["from"]
+        to_state = fsm.transitions_table[transition]["to"]
+
+        g.add((NS_M_FSM[transition], NS_FSM["transition-from"], NS_M_FSM[from_state]))
+        g.add((NS_M_FSM[transition], NS_FSM["transition-to"], NS_M_FSM[to_state]))
+
+    for reaction in fsm.reactions:
+        g.add((NS_M_FSM[reaction], RDF.type, NS_FSM.Reaction))
+        g.add((NS_M_FSM[name], NS_FSM.reactions, NS_M_FSM[reaction]))
+
+        when = fsm.reactions_table[reaction]["when"]
+        do = fsm.reactions_table[reaction]["do"]
+        fires = fsm.reactions_table[reaction]["fires"]
+
+        g.add((NS_M_FSM[reaction], NS_FSM["when-event"], NS_M_FSM[when]))
+        g.add((NS_M_FSM[reaction], NS_FSM["do-transition"], NS_M_FSM[do]))
+        if fires is not None:
+            for event in fires:
+                g.add((NS_M_FSM[reaction], NS_FSM["fires-events"], NS_M_FSM[event]))
+
+    context = {"fsm": URI_MM_FSM, "el": URI_MM_EL, "xsd": str(XSD), fsm.ns: URI_M_FSM}
+
+    return g, context
+
+
+@generator("fsm", "graph")
+def fsm_graph_gen(metamodel, model, output_path, overwrite, debug, **kwargs):
+    """Generates a .jsonld file with the FSM datastructures"""
+
+    assert model.name.ns is not None and model.name.ns != "", (
+        "Namespace is required for Graph generation"
+    )
+
+    print(f"Generating JSON-LD for FSM: {model.name}")
+
+    fsm = parse_fsm(model)
+    fsm.ns = model.name.ns.name
+    fsm.ns_uri = model.name.ns.uri
+
+    g, context = get_fsm_graph(fsm, **kwargs)
+
+    g_format = kwargs.get("format", "json-ld")
+
+    assert g_format in __GRAPH_FORMAT_EXT, (
+        f"Unsupported graph format '{g_format}', supported formats are: {list(__GRAPH_FORMAT_EXT.keys())}"
+    )
+
+    if not output_path:
+        model_path = Path(model._tx_filename).parent
+        output_path = f"{model_path}/{fsm.name}.fsm.{__GRAPH_FORMAT_EXT[g_format]}"
+
+    ser_kwargs = {
+        "destination": output_path,
+        "format": g_format,
+        "indent": 4,
+        "context": context,
+    }
+
+    if "nocompact" in kwargs:
+        ser_kwargs["auto_compact"] = False
+    else:
+        ser_kwargs["auto_compact"] = True
+
+    g.serialize(**ser_kwargs)
+    print(f"FSM JSON-LD generated at {output_path}")
+
+
 @generator("fsm", "console")
-def fsm_console_gen(metamodel, model, output_path, overwrite, debug, **custom_args):
+def fsm_console_gen(metamodel, model, output_path, overwrite, debug, **kwargs):
     """Prints the FSM datastructures to the console"""
     print(f"Generating FSM: {model.name}")
 
-    fsm = parse_fsm(model)
+    g_format = kwargs.get("format", "json")
 
-    print(fsm.to_json())
+    if g_format != "json":
+        assert g_format in __GRAPH_FORMAT_EXT, (
+            f"Unsupported graph format '{g_format}', supported formats are: {list(__GRAPH_FORMAT_EXT.keys())}"
+        )
+
+    fsm = parse_fsm(model)
+    if g_format == "json":
+        print(fsm.to_json())
+    else:
+        assert model.name.ns is not None and model.name.ns != "", (
+            "Namespace is required for Graph generation"
+        )
+        fsm.ns = model.name.ns.name
+        fsm.ns_uri = model.name.ns.uri
+        g, context = get_fsm_graph(fsm, **kwargs)
+        print(
+            g.serialize(
+                format=g_format,
+                indent=4,
+                context=context,
+                auto_compact=not kwargs.get("nocompact", False),
+            )
+        )
 
 
 @generator("fsm", "cpp")
-def fsm_cpp_gen(metamodel, model, output_path, overwrite, debug, **custom_args):
+def fsm_cpp_gen(metamodel, model, output_path, overwrite, debug, **kwargs):
     """Generates a .hpp file with the FSM datastructures"""
 
     print(f"Generating C code for FSM: {model.name}")
@@ -114,7 +248,7 @@ def fsm_cpp_gen(metamodel, model, output_path, overwrite, debug, **custom_args):
 
 
 @generator("fsm", "py")
-def fsm_py_gen(metamodel, model, output_path, overwrite, debug, **custom_args):
+def fsm_py_gen(metamodel, model, output_path, overwrite, debug, **kwargs):
     """Generates a .py file with the FSM datastructures"""
 
     print(f"Generating Python code for FSM: {model.name}")
@@ -144,7 +278,7 @@ def fsm_py_gen(metamodel, model, output_path, overwrite, debug, **custom_args):
 
 
 @generator("fsm", "json")
-def fsm_json_gen(metamodel, model, output_path, overwrite, debug, **custom_args):
+def fsm_json_gen(metamodel, model, output_path, overwrite, debug, **kwargs):
     """Generates a .json file with the FSM datastructures"""
 
     print(f"Generating JSON for FSM: {model.name}")

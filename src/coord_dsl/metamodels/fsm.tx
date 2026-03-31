@@ -1,15 +1,24 @@
-FSM: 
-	"NAME" ":" name=ID
-	(
+import base
+
+FSM:
+    namespaces=NamespaceDeclare*
+	"NAME" ":" name=Name
+    (
 		"DESCRIPTION" ":" description=STRING
 	)?
-	"STATES" ":" states+=State[',']
-	"START_STATE" ":" "@"start_state=[State]
+	"STATES"        ":" states+=State[',']
+	"START_STATE"   ":" "@"start_state=[State]
 	"CURRENT_STATE" ":" "@"current_state=[State]
-	"END_STATE" ":" "@"end_state=[State]
-	"EVENTS" ":" events+=Event[',']
-	"TRANSITIONS" ":" transitions+=Transition
-	"REACTIONS" ":" reactions+=Reaction
+	"END_STATE"     ":" "@"end_state=[State]
+	"EVENTS"        ":" events+=Event[',']
+	"TRANSITIONS"   ":" transitions+=Transition
+	"REACTIONS"     ":" reactions+=Reaction
+;
+
+Name:
+      ( ns=[NamespaceDeclare] '.' local=IRI_TRUNK )
+    | ( '(' 'ns' '=' ns=[NamespaceDeclare] ')' local=IRI_TRUNK )
+    | local=IRI_TRUNK
 ;
 
 State:
@@ -22,17 +31,14 @@ Event:
 
 Transition:
 	name=ID ":"
-		"FROM" ":" "@"from_state=[State]
-		"TO" ":" "@"to_state=[State]
+		"FROM"  ":" "@"from_state=[State]
+		"TO"    ":" "@"to_state=[State]
 ;
 
 Reaction:
 	name=ID ":"
-		"WHEN" ":" "@"when=[Event]
-		"DO" ":" "@"do=[Transition]
+		"WHEN"   ":" "@"when=[Event]
+		"DO"     ":" "@"do=[Transition]
 		("FIRES" ":" "@"fires=[Event] ("," "@"fires+=[Event])*)?
 ;
 
-Comment:
-	(/\/\/.*$/ | /(?ms)\/\*(.*?)\*\//)
-;

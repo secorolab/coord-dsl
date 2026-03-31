@@ -1,4 +1,4 @@
-NAME: example
+NAME: example-fsm
 DESCRIPTION: "Example of a simple FSM"
 
 STATES: S_START,S_CONFIGURE,S_IDLE,S_COMPILE,S_EXECUTE,S_EXIT
