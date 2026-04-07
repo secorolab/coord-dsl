@@ -1,4 +1,0 @@
-FQN: IRI_TRUNK+['.'];
-Comment: /\/\/.*$/;
-NamespaceDeclare: 'ns' name=IRI_TRUNK '=' uri=STRING ;
-IRI_TRUNK: /[^\d\W][\w-]*\b/;
