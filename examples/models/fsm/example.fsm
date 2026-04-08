@@ -1,6 +1,6 @@
-ns fsm = "http://example.org/fsm#"
+ns ex = "http://example.org/"
 
-NAME: example-fsm
+FSM (ns=ex) ex_fsm {
 DESCRIPTION: "Example of a simple FSM"
 
 STATES: S_START,S_CONFIGURE,S_IDLE,S_COMPILE,S_EXECUTE,S_EXIT
@@ -77,3 +77,4 @@ REACTIONS:
     R_E_STEP3:
         WHEN: @E_STEP
         DO: @T_EXECUTE_EXECUTE
+}

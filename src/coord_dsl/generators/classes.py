@@ -1,31 +1,19 @@
-from __future__ import annotations
 from typing import Optional
+from coord_dsl.generators.common import IHasNamespaceDeclare, NamedNamespaceObject
 
 
-class NamespaceDeclare:
-    def __init__(self, **kwargs):
-        self.name: str = kwargs.get("name", "")
-        self.uri: str = kwargs.get("uri", "")
+class State(NamedNamespaceObject):
+    pass
+
+class Event(NamedNamespaceObject):
+    pass
 
 
-class State:
-    def __init__(self, **kwargs):
-        self.name: str = kwargs.get("name", "")
-        self.uri: str = ""
-
-
-class Event:
-    def __init__(self, **kwargs):
-        self.name: str = kwargs.get("name", "")
-        self.uri: str = ""
-
-
-class Transition:
-    def __init__(self, **kwargs):
-        self.name: str = kwargs.get("name", "")
-        self.from_state: State = kwargs.get("from_state", State())
-        self.to_state: State = kwargs.get("to_state", State())
-        self.uri: str = ""
+class Transition(NamedNamespaceObject):
+    def __init__(self, parent, name, from_state, to_state):
+        super().__init__(parent=parent, name=name)
+        self.from_state: State = from_state
+        self.to_state: State = to_state
 
 
 class FiredEvent:
@@ -33,31 +21,29 @@ class FiredEvent:
         self.event: Optional[Event] = kwargs.get("event")
 
 
-class Reaction:
-    def __init__(self, **kwargs):
-        self.name: str = kwargs.get("name", "")
-        self.when: Event = kwargs.get("when", Event())
-        self.do: Transition = kwargs.get("do", Transition())
-        self.fires: list[FiredEvent] = kwargs.get("fires", [])
-        self.uri: str = ""
+class Reaction(NamedNamespaceObject):
+    def __init__(self, parent, name, when, do, fires):
+        super().__init__(parent=parent, name=name)
+        self.when: Event = when
+        self.do: Transition = do
+        self.fires: list[FiredEvent] = fires
 
     @property
     def fired_events(self) -> list[Event]:
         return [f.event for f in self.fires if f.event is not None]
 
 
-class FSM:
-    def __init__(self, **kwargs):
-        self.namespace: NamespaceDeclare = kwargs.get("namespace", NamespaceDeclare())
-        self.name: str = kwargs.get("name", "")
-        self.description: Optional[str] = kwargs.get("description")
-        self.states: list[State] = kwargs.get("states", [])
-        self.start_state: State = kwargs.get("start_state", State())
-        self.end_state: State = kwargs.get("end_state", State())
-        self.events: list[Event] = kwargs.get("events", [])
-        self.transitions: list[Transition] = kwargs.get("transitions", [])
-        self.reactions: list[Reaction] = kwargs.get("reactions", [])
-        self.uri: str = ""
+class FSM(IHasNamespaceDeclare):
+    def __init__(self, parent, ns, name, description, states, start_state, 
+                 end_state, events, transitions, reactions):
+        super().__init__(parent=parent, ns=ns, name=name)
+        self.description: Optional[str] = description
+        self.states: list[State] = states
+        self.start_state: State = start_state
+        self.end_state: State = end_state
+        self.events: list[Event] = events
+        self.transitions: list[Transition] = transitions
+        self.reactions: list[Reaction] = reactions
 
     def _all_entities(self) -> list:
         return self.states + self.events + self.transitions + self.reactions

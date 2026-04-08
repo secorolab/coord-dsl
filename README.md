@@ -7,7 +7,7 @@ Domain-Specific Languages (DSLs) for modelling coordination of (robot) behaviour
 The library can be installed as a Python package, e.g., with `pip`:
 
 ```bash
-pip install "./coord_dsl"
+pip install "coord_dsl"
 ```
 
 ## Coordination Models
@@ -133,9 +133,9 @@ REACTIONS:
 
 ```bash
 textx generate example.fsm --target cpp -o model.hpp
-textx generate example.fsm --target py -o model.py
+textx generate example.fsm --target python -o model.py
 textx generate example.fsm --target graph --format json-ld --autocompact
-textx generate example.fsm --target console --format ttl --autocompact
+textx generate example.fsm --target file --format ttl --autocompact
 ```
 
 * Generates a C++ header file with the data structures required for the FSM, along with a sample implementation code.
@@ -144,9 +144,8 @@ textx generate example.fsm --target console --format ttl --autocompact
   the same name and `.hpp` extension.
 * Available targets:
   - `cpp`: A C++ header file.
-  - `py`: A Python module.
-  - `json`: JSON file.
-  - graph: A graph representation of the FSM in formats [json-ld, ttl, xml].
+  - `python`: A Python module.
+  - `graph`: A graph representation of the FSM in formats [json-ld, ttl, xml].
   - `console`: Console output.
 * Available formats for graph and console targets through the `--format` option:
   - `json-ld`: JSON-LD format.
@@ -159,3 +158,4 @@ textx generate example.fsm --target console --format ttl --autocompact
 * The generated header file is dependent on the [coord2b](https://github.com/rosym-project/coord2b) library.
 * The [traffic_lights.c](https://github.com/rosym-project/coord2b/blob/master/src/example/traffic_lights.c) example
   is a good starting point to understand how to use the generated data structures.
+* [examples/models/fsm](examples/models/fsm/) contains examples for executing [python](examples/models/fsm/generated_fsm_bgv.py) and [cpp](examples/models/fsm/test_fsm.cpp) code generated from FSM models.

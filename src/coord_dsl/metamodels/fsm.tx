@@ -1,13 +1,18 @@
+Model:
+    namespaces*=NamespaceDeclare
+    fsm=FSM
+;
+
 FSM:
-    namespace=NamespaceDeclare
-    "NAME"        ":" name=Name
+"FSM" "(" "ns" "=" ns=[NamespaceDeclare|FQN] ")"  name=IRI_TRUNK "{"
     ("DESCRIPTION" ":" description=STRING)?
-    "STATES"      ":" states+=State[',']
+    "STATES"      ":" states+=State[","]
     "START_STATE" ":" "@" start_state=[State]
     "END_STATE"   ":" "@" end_state=[State]
-    "EVENTS"      ":" events+=Event[',']
+    "EVENTS"      ":" events+=Event[","]
     "TRANSITIONS" ":" transitions+=Transition
     "REACTIONS"   ":" reactions+=Reaction
+"}"
 ;
 
 State:
@@ -28,13 +33,15 @@ Reaction:
     name=ID ":"
         "WHEN" ":" "@" when=[Event]
         "DO"   ":" "@" do=[Transition]
-        ("FIRES" ":" fires+=FiredEvent[','])?
+        ("FIRES" ":" fires+=FiredEvent[","])?
 ;
 
 FiredEvent:
     "@" event=[Event]
 ;
 
-Comment:      /\/\/.*$/;
-NamespaceDeclare: 'ns' name=ID '=' uri=STRING;
-Name: /[^\d\W][\w-]*/;
+FQN: IRI_TRUNK+["."];
+Import: "import" importURI=STRING;
+Comment: /\/\/.*$/;
+NamespaceDeclare: "ns" name=IRI_TRUNK "=" uri=STRING ;
+IRI_TRUNK: /[^\d\W][\w-]*\b/;
