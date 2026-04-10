@@ -8,7 +8,9 @@
  * Usage example:
  * -----------------------------------------------------
 
-#include "{{ data.name }}.fsm.hpp"
+#include "coord2b/functions/event_loop.h"
+#include "coord2b/functions/fsm.h"
+#include "{{ data.name }}.hpp"
 
 struct user_data {
 
@@ -17,11 +19,11 @@ struct user_data {
 void yyyy_behavior(struct user_data *userData, struct events *eventData) {
     // ... do something
 
-    produce_event(eventData, E_ZZZZ);
+    produce_event(eventData, {{ data.name }}::E_ZZZZ);
 }
 
 void fsm_behavior(struct events *eventData, struct user_data *userData) {
-    if (consume_event(eventData, E_XXXX)) {
+    if (consume_event(eventData, {{ data.name }}::E_XXXX)) {
         yyyy_behavior(userData, eventData);
     }
     ...
@@ -30,11 +32,11 @@ void fsm_behavior(struct events *eventData, struct user_data *userData) {
 int main() {
 
     struct user_data userData = {};
-    struct fsm_nbx *fsm = create_fsm();
+    struct fsm_nbx *fsm = {{ data.name }}::create_fsm();
     if (!fsm) return 1;
 
     while (true) {
-        produce_event(fsm->eventData, E_STEP);
+        produce_event(fsm->eventData, {{ data.name }}::E_STEP);
 
         // run state machine, event loop
         fsm_behavior(fsm->eventData, &userData);
@@ -42,19 +44,22 @@ int main() {
         reconfig_event_buffers(fsm->eventData);
     }
 
-    destroy_fsm(fsm);
+    {{ data.name }}::destroy_fsm(fsm);
     return 0;
 }
 
  * -----------------------------------------------------
  */
 
-#ifndef {{ data.name.upper() }}_FSM_HPP
-#define {{ data.name.upper()  }}_FSM_HPP
+#ifndef {{ data.name.upper() }}_HPP
+#define {{ data.name.upper()  }}_HPP
 
 #include "coord2b/types/fsm.h"
 #include "coord2b/types/event_loop.h"
 #include <new>
+
+
+namespace {{ data.name.lower() }} {
 
 struct fsm_nbx * create_fsm();
 void destroy_fsm(struct fsm_nbx * fsm);
@@ -117,24 +122,24 @@ static constexpr const char * REACTION_URIS[NUM_REACTIONS] = {
 
 inline struct fsm_nbx * create_fsm() {
 
-    struct fsm_nbx * fsm = new (std::nothrow) fsm_nbx{
-        .numReactions = NUM_REACTIONS,
-        .numTransitions = NUM_TRANSITIONS,
-        .numStates = NUM_STATES,
-        .states = nullptr,
-        .startStateIndex = {{ data.start_state }},
-        .endStateIndex = {{ data.end_state }},
+    struct fsm_nbx * fsm   = new (std::nothrow) fsm_nbx{
+        .numReactions      = NUM_REACTIONS,
+        .numTransitions    = NUM_TRANSITIONS,
+        .numStates         = NUM_STATES,
+        .states            = nullptr,
+        .startStateIndex   = {{ data.start_state }},
+        .endStateIndex     = {{ data.end_state }},
         .currentStateIndex = {{ data.start_state }},
-        .eventData = nullptr,
-        .reactions = nullptr,
-        .transitions = nullptr
+        .eventData         = nullptr,
+        .reactions         = nullptr,
+        .transitions       = nullptr
     };
     if (!fsm) return nullptr;
 
     // sm states
     struct state * states = new (std::nothrow) state[NUM_STATES]{
     {%- for state in data.states %}
-        {.name = "{{ state.capitalize() }}"}{% if loop.last %} {% else %}, {% endif %}
+        {.name = "{{ state.capitalize() }}"}{% if loop.last %}{% else %},{% endif %}
     {%- endfor %}
     };
 
@@ -143,8 +148,8 @@ inline struct fsm_nbx * create_fsm() {
     {%- for transition in data.transitions_table %}
         {
             .startStateIndex = {{ transition.from_state }},
-            .endStateIndex = {{ transition.to_state }},
-        }{% if loop.last %} {% else %}, {% endif %}
+            .endStateIndex   = {{ transition.to_state }},
+        }{% if loop.last %}{% else %},{% endif %}
     {%- endfor %}
     };
 
@@ -153,18 +158,18 @@ inline struct fsm_nbx * create_fsm() {
     {%- for reaction in data.reactions_table %}
         {
             .conditionEventIndex = {{ reaction.when_event }},
-            .transitionIndex = {{ reaction.do_transition }},
-            .numFiredEvents = {{ reaction.num_fires }},
+            .transitionIndex     = {{ reaction.do_transition }},
+            .numFiredEvents      = {{ reaction.num_fires }},
     {%- if reaction.fires_events %}
-            .firedEventIndices = new unsigned int[{{ reaction.num_fires }}]{
+            .firedEventIndices   = new unsigned int[{{ reaction.num_fires }}]{
     {%- for event in reaction.fires_events %}
-                {{ event }}{% if loop.last %} {% else %}, {% endif %}
+                                     {{ event }}{% if loop.last %}{% else %},{% endif %}
     {%- endfor %}
-            },
+                                   },
     {%- else %}
-            .firedEventIndices = nullptr,
-    {% endif %}
-        }{% if loop.last %} {% else %}, {% endif %}
+            .firedEventIndices   = nullptr,
+    {%- endif %}
+        }{% if loop.last %}{% else %},{% endif %}
     {%- endfor -%}
     };
 
@@ -208,14 +213,14 @@ inline struct fsm_nbx * create_fsm() {
         delete fsm;
         return nullptr;
     }
-    eventData->numEvents = NUM_EVENTS;
+    eventData->numEvents     = NUM_EVENTS;
     eventData->currentEvents = currentEvents;
-    eventData->futureEvents = futureEvents;
+    eventData->futureEvents  = futureEvents;
 
     // sm fsm struct
-    fsm->states = states;
-    fsm->eventData = eventData;
-    fsm->reactions = reactions;
+    fsm->states      = states;
+    fsm->eventData   = eventData;
+    fsm->reactions   = reactions;
     fsm->transitions = transitions;
 
     return fsm;
@@ -242,4 +247,6 @@ inline void destroy_fsm(struct fsm_nbx * fsm) {
     delete fsm;
 }
 
-#endif // {{ data.name.upper()  }}_FSM_HPP
+} // namespace {{ data.name.lower() }}
+
+#endif // {{ data.name.upper()  }}_HPP

@@ -127,7 +127,7 @@ fsm_console_gen = GeneratorDesc(
 
 fsm_file_gen = GeneratorDesc(
     language="coord_dsl_fsm",
-    target="file",
+    target="graph",
     description="Generates a file with the FSM graph in RDF format",
     generator=graph_gen_file,
 )

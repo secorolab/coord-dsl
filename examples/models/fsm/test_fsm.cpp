@@ -24,12 +24,13 @@ int main()
     auto           now          = clock::now();
     auto           next_print   = now + print_period;
 
-    auto fsm     = create_fsm();
+    auto fsm     = ex_fsm::create_fsm();
     bool compile = true;
+    printf("Starting generated FSM example. Press Ctrl+C to exit.\n\n");
     while (!stopFlag) {
         next_tick += tick_period;
 
-        produce_event(fsm->eventData, E_STEP);
+        produce_event(fsm->eventData, ex_fsm::E_STEP);
 
         // run state machine, event loop
         fsm_step_nbx(fsm);
@@ -39,29 +40,29 @@ int main()
         now = clock::now();
         if (now > next_print) {
             next_print += print_period;
-            std::cout << "State: " << fsm->states[fsm->currentStateIndex].name
-                      << " (" << STATE_URIS[fsm->currentStateIndex] << ")" << std::endl;
+            std::cout << "State: " << fsm->states[fsm->currentStateIndex].name << " ("
+                      << ex_fsm::STATE_URIS[fsm->currentStateIndex] << ")" << std::endl;
 
-            if (fsm->currentStateIndex == S_CONFIGURE) {
-                produce_event(fsm->eventData, E_CONFIGURE_EXIT);
-            } else if (fsm->currentStateIndex == S_IDLE) {
+            if (fsm->currentStateIndex == ex_fsm::S_CONFIGURE) {
+                produce_event(fsm->eventData, ex_fsm::E_CONFIGURE_EXIT);
+            } else if (fsm->currentStateIndex == ex_fsm::S_IDLE) {
                 if (compile) {
-                    produce_event(fsm->eventData, E_IDLE_EXIT_COMPILE);
+                    produce_event(fsm->eventData, ex_fsm::E_IDLE_EXIT_COMPILE);
                 } else {
-                    produce_event(fsm->eventData, E_IDLE_EXIT_EXECUTE);
+                    produce_event(fsm->eventData, ex_fsm::E_IDLE_EXIT_EXECUTE);
                 }
                 compile = !compile;
-            } else if (fsm->currentStateIndex == S_COMPILE) {
-                produce_event(fsm->eventData, E_COMPILE_EXIT);
-            } else if (fsm->currentStateIndex == S_EXECUTE) {
-                produce_event(fsm->eventData, E_EXECUTE_EXIT);
+            } else if (fsm->currentStateIndex == ex_fsm::S_COMPILE) {
+                produce_event(fsm->eventData, ex_fsm::E_COMPILE_EXIT);
+            } else if (fsm->currentStateIndex == ex_fsm::S_EXECUTE) {
+                produce_event(fsm->eventData, ex_fsm::E_EXECUTE_EXIT);
             }
         }
 
         std::this_thread::sleep_until(next_tick);
     }
 
-    destroy_fsm(fsm);
+    ex_fsm::destroy_fsm(fsm);
 
     return 0;
 }

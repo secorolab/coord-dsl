@@ -19,7 +19,6 @@ Examples:
 ...     reconfig_event_buffers(fsm.event_data)
 """
 from enum import IntEnum, auto
-from typing import NamedTuple
 from coord_dsl.event_loop import EventData
 from coord_dsl.fsm import FSMData, Transition, EventReaction
 
@@ -72,15 +71,53 @@ class ReactionID(IntEnum):
     R_E_STEP3 = auto()
 
 
-class FSMInstance(NamedTuple):
-    fsm: FSMData
-    state_uris: dict[StateID, str]
-    event_uris: dict[EventID, str]
-    transition_uris: dict[TransitionID, str]
-    reaction_uris: dict[ReactionID, str]
+# URI mappings
+STATE_URIS: dict[StateID, str] = {
+    StateID.S_START: "http://example.org/S_START",
+    StateID.S_CONFIGURE: "http://example.org/S-CONFIGURE",
+    StateID.S_IDLE: "http://example.org/S_IDLE",
+    StateID.S_COMPILE: "http://example.org/S-COMPILE",
+    StateID.S_EXECUTE: "http://example.org/S_EXECUTE",
+    StateID.S_EXIT: "http://example.org/S_EXIT",
+}
+
+EVENT_URIS: dict[EventID, str] = {
+    EventID.E_CONFIGURE_ENTERED: "http://example.org/E-CONFIGURE-ENTERED",
+    EventID.E_CONFIGURE_EXIT: "http://example.org/E-CONFIGURE-EXIT",
+    EventID.E_IDLE_ENTERED: "http://example.org/E_IDLE_ENTERED",
+    EventID.E_IDLE_EXIT_EXECUTE: "http://example.org/E_IDLE_EXIT_EXECUTE",
+    EventID.E_IDLE_EXIT_COMPILE: "http://example.org/E_IDLE_EXIT_COMPILE",
+    EventID.E_COMPILE_ENTERED: "http://example.org/E-COMPILE-ENTERED",
+    EventID.E_COMPILE_EXIT: "http://example.org/E-COMPILE-EXIT",
+    EventID.E_EXECUTE_ENTERED: "http://example.org/E_EXECUTE_ENTERED",
+    EventID.E_EXECUTE_EXIT: "http://example.org/E_EXECUTE_EXIT",
+    EventID.E_STEP: "http://example.org/E_STEP",
+}
+
+TRANSITION_URIS: dict[TransitionID, str] = {
+    TransitionID.T_START_CONFIGURE: "http://example.org/T_START_CONFIGURE",
+    TransitionID.T_CONFIGURE_IDLE: "http://example.org/T_CONFIGURE_IDLE",
+    TransitionID.T_IDLE_IDLE: "http://example.org/T_IDLE_IDLE",
+    TransitionID.T_IDLE_EXECUTE: "http://example.org/T_IDLE_EXECUTE",
+    TransitionID.T_IDLE_COMPILE: "http://example.org/T_IDLE_COMPILE",
+    TransitionID.T_COMPILE_EXECUTE: "http://example.org/T_COMPILE_EXECUTE",
+    TransitionID.T_EXECUTE_EXECUTE: "http://example.org/T_EXECUTE_EXECUTE",
+    TransitionID.T_EXECUTE_IDLE: "http://example.org/T_EXECUTE_IDLE",
+}
+
+REACTION_URIS: dict[ReactionID, str] = {
+    ReactionID.R_E_CONFIGURE_EXIT: "http://example.org/R_E_CONFIGURE_EXIT",
+    ReactionID.R_E_IDLE_EXIT_EXECUTE: "http://example.org/R_E_IDLE_EXIT_EXECUTE",
+    ReactionID.R_E_IDLE_EXIT_COMPILE: "http://example.org/R_E_IDLE_EXIT_COMPILE",
+    ReactionID.R_E_COMPILE_EXIT: "http://example.org/R_E_COMPILE_EXIT",
+    ReactionID.R_E_EXECUTE_EXIT: "http://example.org/R_E_EXECUTE_EXIT",
+    ReactionID.R_E_STEP1: "http://example.org/R_E_STEP1",
+    ReactionID.R_E_STEP2: "http://example.org/R_E_STEP2",
+    ReactionID.R_E_STEP3: "http://example.org/R_E_STEP3",
+}
 
 
-def create_fsm() -> FSMInstance:
+def create_fsm() -> FSMData:
     """Creates the FSM data structure."""
     # Transitions
     trans_dict = {
@@ -156,61 +193,13 @@ def create_fsm() -> FSMInstance:
     # Events
     events = EventData(len(EventID))
 
-    # URI mappings
-    state_uris: dict[StateID, str] = {
-        StateID.S_START: "http://example.org/S_START",
-        StateID.S_CONFIGURE: "http://example.org/S-CONFIGURE",
-        StateID.S_IDLE: "http://example.org/S_IDLE",
-        StateID.S_COMPILE: "http://example.org/S-COMPILE",
-        StateID.S_EXECUTE: "http://example.org/S_EXECUTE",
-        StateID.S_EXIT: "http://example.org/S_EXIT",
-    }
-    event_uris: dict[EventID, str] = {
-        EventID.E_CONFIGURE_ENTERED: "http://example.org/E-CONFIGURE-ENTERED",
-        EventID.E_CONFIGURE_EXIT: "http://example.org/E-CONFIGURE-EXIT",
-        EventID.E_IDLE_ENTERED: "http://example.org/E_IDLE_ENTERED",
-        EventID.E_IDLE_EXIT_EXECUTE: "http://example.org/E_IDLE_EXIT_EXECUTE",
-        EventID.E_IDLE_EXIT_COMPILE: "http://example.org/E_IDLE_EXIT_COMPILE",
-        EventID.E_COMPILE_ENTERED: "http://example.org/E-COMPILE-ENTERED",
-        EventID.E_COMPILE_EXIT: "http://example.org/E-COMPILE-EXIT",
-        EventID.E_EXECUTE_ENTERED: "http://example.org/E_EXECUTE_ENTERED",
-        EventID.E_EXECUTE_EXIT: "http://example.org/E_EXECUTE_EXIT",
-        EventID.E_STEP: "http://example.org/E_STEP",
-    }
-    transition_uris: dict[TransitionID, str] = {
-        TransitionID.T_START_CONFIGURE: "http://example.org/T_START_CONFIGURE",
-        TransitionID.T_CONFIGURE_IDLE: "http://example.org/T_CONFIGURE_IDLE",
-        TransitionID.T_IDLE_IDLE: "http://example.org/T_IDLE_IDLE",
-        TransitionID.T_IDLE_EXECUTE: "http://example.org/T_IDLE_EXECUTE",
-        TransitionID.T_IDLE_COMPILE: "http://example.org/T_IDLE_COMPILE",
-        TransitionID.T_COMPILE_EXECUTE: "http://example.org/T_COMPILE_EXECUTE",
-        TransitionID.T_EXECUTE_EXECUTE: "http://example.org/T_EXECUTE_EXECUTE",
-        TransitionID.T_EXECUTE_IDLE: "http://example.org/T_EXECUTE_IDLE",
-    }
-    reaction_uris: dict[ReactionID, str] = {
-        ReactionID.R_E_CONFIGURE_EXIT: "http://example.org/R_E_CONFIGURE_EXIT",
-        ReactionID.R_E_IDLE_EXIT_EXECUTE: "http://example.org/R_E_IDLE_EXIT_EXECUTE",
-        ReactionID.R_E_IDLE_EXIT_COMPILE: "http://example.org/R_E_IDLE_EXIT_COMPILE",
-        ReactionID.R_E_COMPILE_EXIT: "http://example.org/R_E_COMPILE_EXIT",
-        ReactionID.R_E_EXECUTE_EXIT: "http://example.org/R_E_EXECUTE_EXIT",
-        ReactionID.R_E_STEP1: "http://example.org/R_E_STEP1",
-        ReactionID.R_E_STEP2: "http://example.org/R_E_STEP2",
-        ReactionID.R_E_STEP3: "http://example.org/R_E_STEP3",
-    }
-
     # Return FSM instance
-    return FSMInstance(
-        fsm=FSMData(
-            event_data=events,
-            num_states=len(StateID),
-            start_state_index=StateID.S_START,
-            end_state_index=StateID.S_EXIT,
-            transitions=trans_list,
-            event_reactions=evt_reaction_list,
-            current_state_index=StateID.S_START,
-        ),
-        state_uris=state_uris,
-        event_uris=event_uris,
-        transition_uris=transition_uris,
-        reaction_uris=reaction_uris,
+    return FSMData(
+        event_data          = events,
+        num_states          = len(StateID),
+        start_state_index   = StateID.S_START,
+        end_state_index     = StateID.S_EXIT,
+        transitions         = trans_list,
+        event_reactions     = evt_reaction_list,
+        current_state_index = StateID.S_START,
     )
