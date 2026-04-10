@@ -82,6 +82,10 @@ def local_name(uri: str) -> str:
         return uri.split("#")[-1]
     return uri.rstrip("/").split("/")[-1]
 
+def to_identifier(name: str) -> str:
+    """Sanitize a local name for use as a code identifier (Python/C++)."""
+    return name.replace("-", "_")
+
 def uri_str(node) -> str:
     return str(node)
 
@@ -96,37 +100,37 @@ def gen_json(g: Graph) -> dict:
     description_node = g.value(fsm_ref, NS_FSM.description)
     description = str(description_node) if description_node is not None else None
 
-    start_state = local_name(uri_str(g.value(fsm_ref, NS_FSM["start-state"])))
-    end_state   = local_name(uri_str(g.value(fsm_ref, NS_FSM["end-state"])))
+    start_state = to_identifier(local_name(uri_str(g.value(fsm_ref, NS_FSM["start-state"]))))
+    end_state   = to_identifier(local_name(uri_str(g.value(fsm_ref, NS_FSM["end-state"]))))
 
     states = []
     for _, _, state_uri in g.triples((fsm_ref, NS_FSM.states, None)):
-        states.append(local_name(uri_str(state_uri)))
+        states.append(to_identifier(local_name(uri_str(state_uri))))
 
     events = []
     for _, _, event_uri in g.triples((fsm_ref, NS_FSM.events, None)):
-        events.append(local_name(uri_str(event_uri)))
+        events.append(to_identifier(local_name(uri_str(event_uri))))
 
     transitions_table = []
     for _, _, tr_uri in g.triples((fsm_ref, NS_FSM.transitions, None)):
-        from_state = local_name(uri_str(g.value(tr_uri, NS_FSM["transition-from"])))
-        to_state   = local_name(uri_str(g.value(tr_uri, NS_FSM["transition-to"])))
+        from_state = to_identifier(local_name(uri_str(g.value(tr_uri, NS_FSM["transition-from"]))))
+        to_state   = to_identifier(local_name(uri_str(g.value(tr_uri, NS_FSM["transition-to"]))))
         transitions_table.append({
-            "id":         local_name(uri_str(tr_uri)),
+            "id":         to_identifier(local_name(uri_str(tr_uri))),
             "from_state": from_state,
             "to_state":   to_state,
         })
 
     reactions_table = []
     for _, _, rx_uri in g.triples((fsm_ref, NS_FSM.reactions, None)):
-        when_event    = local_name(uri_str(g.value(rx_uri, NS_FSM["when-event"])))
-        do_transition = local_name(uri_str(g.value(rx_uri, NS_FSM["do-transition"])))
+        when_event    = to_identifier(local_name(uri_str(g.value(rx_uri, NS_FSM["when-event"]))))
+        do_transition = to_identifier(local_name(uri_str(g.value(rx_uri, NS_FSM["do-transition"]))))
         fires = [
-            local_name(uri_str(ev_uri))
+            to_identifier(local_name(uri_str(ev_uri)))
             for _, _, ev_uri in g.triples((rx_uri, NS_FSM["fires-events"], None))
         ]
         reactions_table.append({
-            "id":            local_name(uri_str(rx_uri)),
+            "id":            to_identifier(local_name(uri_str(rx_uri))),
             "when_event":    when_event,
             "do_transition": do_transition,
             "fires_events":  fires,
