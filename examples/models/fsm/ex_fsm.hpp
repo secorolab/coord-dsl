@@ -70,6 +70,15 @@ enum e_states {
     NUM_STATES
 };
 
+static constexpr const char * STATE_URIS[NUM_STATES] = {
+    "http://example.org/S_START",
+    "http://example.org/S-CONFIGURE",
+    "http://example.org/S_IDLE",
+    "http://example.org/S-COMPILE",
+    "http://example.org/S_EXECUTE",
+    "http://example.org/S_EXIT",
+};
+
 // sm events
 enum e_events {
     E_CONFIGURE_ENTERED = 0,
@@ -85,6 +94,19 @@ enum e_events {
     NUM_EVENTS
 };
 
+static constexpr const char * EVENT_URIS[NUM_EVENTS] = {
+    "http://example.org/E-CONFIGURE-ENTERED",
+    "http://example.org/E-CONFIGURE-EXIT",
+    "http://example.org/E_IDLE_ENTERED",
+    "http://example.org/E_IDLE_EXIT_EXECUTE",
+    "http://example.org/E_IDLE_EXIT_COMPILE",
+    "http://example.org/E-COMPILE-ENTERED",
+    "http://example.org/E-COMPILE-EXIT",
+    "http://example.org/E_EXECUTE_ENTERED",
+    "http://example.org/E_EXECUTE_EXIT",
+    "http://example.org/E_STEP",
+};
+
 // sm transitions
 enum e_transitions {
     T_START_CONFIGURE = 0,
@@ -98,6 +120,17 @@ enum e_transitions {
     NUM_TRANSITIONS
 };
 
+static constexpr const char * TRANSITION_URIS[NUM_TRANSITIONS] = {
+    "http://example.org/T_START_CONFIGURE",
+    "http://example.org/T_CONFIGURE_IDLE",
+    "http://example.org/T_IDLE_IDLE",
+    "http://example.org/T_IDLE_EXECUTE",
+    "http://example.org/T_IDLE_COMPILE",
+    "http://example.org/T_COMPILE_EXECUTE",
+    "http://example.org/T_EXECUTE_EXECUTE",
+    "http://example.org/T_EXECUTE_IDLE",
+};
+
 // sm reactions
 enum e_reactions {
     R_E_CONFIGURE_EXIT = 0,
@@ -109,6 +142,17 @@ enum e_reactions {
     R_E_STEP2,
     R_E_STEP3,
     NUM_REACTIONS
+};
+
+static constexpr const char * REACTION_URIS[NUM_REACTIONS] = {
+    "http://example.org/R_E_CONFIGURE_EXIT",
+    "http://example.org/R_E_IDLE_EXIT_EXECUTE",
+    "http://example.org/R_E_IDLE_EXIT_COMPILE",
+    "http://example.org/R_E_COMPILE_EXIT",
+    "http://example.org/R_E_EXECUTE_EXIT",
+    "http://example.org/R_E_STEP1",
+    "http://example.org/R_E_STEP2",
+    "http://example.org/R_E_STEP3",
 };
 
 inline struct fsm_nbx * create_fsm() {

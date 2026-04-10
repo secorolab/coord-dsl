@@ -14,7 +14,7 @@ from coord_dsl.event_loop import (
     reconfig_event_buffers,
 )
 from coord_dsl.fsm import FSMData, fsm_step
-from ex_fsm import EventID, StateID, create_fsm
+from ex_fsm import EventID, StateID, FSMInstance, create_fsm
 
 
 LOOP_DURATION = 0.01
@@ -89,7 +89,13 @@ def main(state_duration_sec: float):
     signal.signal(signal.SIGINT, signal_handler)
 
     print("Starting generated FSM example. Press Ctrl+C to exit.")
-    fsm = create_fsm()
+    instance: FSMInstance = create_fsm()
+    fsm = instance.fsm
+
+    print("State URIs:")
+    for sid, uri in instance.state_uris.items():
+        print(f"  {sid.name} -> {uri}")
+
     fsm_bhv = {
         StateID.S_CONFIGURE: {
             "step": lambda fsm, ud: generic_step(
