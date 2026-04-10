@@ -6,6 +6,7 @@ from jinja2 import Environment, FileSystemLoader
 from pathlib import Path
 from rdflib import Graph, Namespace, Literal, RDF, XSD, URIRef
 from rdf_utils.uri import URL_SECORO_MM
+from rdf_utils.naming import get_valid_var_name
 from coord_dsl.generators.classes import *
 
 
@@ -82,55 +83,60 @@ def local_name(uri: str) -> str:
         return uri.split("#")[-1]
     return uri.rstrip("/").split("/")[-1]
 
-def to_identifier(name: str) -> str:
-    """Sanitize a local name for use as a code identifier (Python/C++)."""
-    return name.replace("-", "_")
-
-def uri_str(node) -> str:
-    return str(node)
-
 def gen_json(g: Graph) -> dict:
     URI_MM_FSM = f"{URL_SECORO_MM}/behaviour/fsm#"
     NS_FSM = Namespace(URI_MM_FSM)
 
-    fsm_uri = str(g.value(None, RDF.type, NS_FSM.FSM))
+    fsm_uri = g.value(None, RDF.type, NS_FSM.FSM).toPython()
     fsm_ref = URIRef(fsm_uri)
 
     name = str(g.value(fsm_ref, NS_FSM.name))
     description_node = g.value(fsm_ref, NS_FSM.description)
     description = str(description_node) if description_node is not None else None
 
-    start_state = to_identifier(local_name(uri_str(g.value(fsm_ref, NS_FSM["start-state"]))))
-    end_state   = to_identifier(local_name(uri_str(g.value(fsm_ref, NS_FSM["end-state"]))))
+    start_state = get_valid_var_name(local_name(g.value(fsm_ref, NS_FSM["start-state"]).toPython()))
+    end_state   = get_valid_var_name(local_name(g.value(fsm_ref, NS_FSM["end-state"]).toPython()))
 
     states = []
+    state_uris = {}
     for _, _, state_uri in g.triples((fsm_ref, NS_FSM.states, None)):
-        states.append(to_identifier(local_name(uri_str(state_uri))))
+        uri_s = state_uri.toPython()
+        ident = get_valid_var_name(local_name(uri_s))
+        states.append(ident)
+        state_uris[ident] = uri_s
 
     events = []
+    event_uris = {}
     for _, _, event_uri in g.triples((fsm_ref, NS_FSM.events, None)):
-        events.append(to_identifier(local_name(uri_str(event_uri))))
+        uri_s = event_uri.toPython()
+        ident = get_valid_var_name(local_name(uri_s))
+        events.append(ident)
+        event_uris[ident] = uri_s
 
     transitions_table = []
     for _, _, tr_uri in g.triples((fsm_ref, NS_FSM.transitions, None)):
-        from_state = to_identifier(local_name(uri_str(g.value(tr_uri, NS_FSM["transition-from"]))))
-        to_state   = to_identifier(local_name(uri_str(g.value(tr_uri, NS_FSM["transition-to"]))))
+        uri_s = tr_uri.toPython()
+        from_state = get_valid_var_name(local_name(g.value(tr_uri, NS_FSM["transition-from"]).toPython()))
+        to_state   = get_valid_var_name(local_name(g.value(tr_uri, NS_FSM["transition-to"]).toPython()))
         transitions_table.append({
-            "id":         to_identifier(local_name(uri_str(tr_uri))),
+            "id":         get_valid_var_name(local_name(uri_s)),
+            "uri":        uri_s,
             "from_state": from_state,
             "to_state":   to_state,
         })
 
     reactions_table = []
     for _, _, rx_uri in g.triples((fsm_ref, NS_FSM.reactions, None)):
-        when_event    = to_identifier(local_name(uri_str(g.value(rx_uri, NS_FSM["when-event"]))))
-        do_transition = to_identifier(local_name(uri_str(g.value(rx_uri, NS_FSM["do-transition"]))))
+        uri_s = rx_uri.toPython()
+        when_event    = get_valid_var_name(local_name(g.value(rx_uri, NS_FSM["when-event"]).toPython()))
+        do_transition = get_valid_var_name(local_name(g.value(rx_uri, NS_FSM["do-transition"]).toPython()))
         fires = [
-            to_identifier(local_name(uri_str(ev_uri)))
+            get_valid_var_name(local_name(ev_uri.toPython()))
             for _, _, ev_uri in g.triples((rx_uri, NS_FSM["fires-events"], None))
         ]
         reactions_table.append({
-            "id":            to_identifier(local_name(uri_str(rx_uri))),
+            "id":            get_valid_var_name(local_name(uri_s)),
+            "uri":           uri_s,
             "when_event":    when_event,
             "do_transition": do_transition,
             "fires_events":  fires,
@@ -143,7 +149,9 @@ def gen_json(g: Graph) -> dict:
         "start_state": start_state,
         "end_state":   end_state,
         "states":      states,
+        "state_uris":  state_uris,
         "events":      events,
+        "event_uris":  event_uris,
         "transitions_table": transitions_table,
         "reactions_table":   reactions_table,
     }

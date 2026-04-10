@@ -19,6 +19,7 @@ Examples:
 ...     reconfig_event_buffers(fsm.event_data)
 """
 from enum import IntEnum, auto
+from typing import NamedTuple
 from coord_dsl.event_loop import EventData
 from coord_dsl.fsm import FSMData, Transition, EventReaction
 
@@ -51,7 +52,15 @@ class ReactionID(IntEnum):
 {%- endfor %}
 
 
-def create_fsm() -> FSMData:
+class FSMInstance(NamedTuple):
+    fsm: FSMData
+    state_uris: dict[StateID, str]
+    event_uris: dict[EventID, str]
+    transition_uris: dict[TransitionID, str]
+    reaction_uris: dict[ReactionID, str]
+
+
+def create_fsm() -> FSMInstance:
     """Creates the FSM data structure."""
     # Transitions
     trans_dict = {
@@ -84,13 +93,41 @@ def create_fsm() -> FSMData:
     # Events
     events = EventData(len(EventID))
 
-    # Return FSM Data
-    return FSMData(
-        event_data=events,
-        num_states=len(StateID),
-        start_state_index=StateID.{{ data.start_state }},
-        end_state_index=StateID.{{ data.end_state }},
-        transitions=trans_list,
-        event_reactions=evt_reaction_list,
-        current_state_index=StateID.{{ data.start_state }},
+    # URI mappings
+    state_uris: dict[StateID, str] = {
+{%- for state in data.states %}
+        StateID.{{ state }}: "{{ data.state_uris[state] }}",
+{%- endfor %}
+    }
+    event_uris: dict[EventID, str] = {
+{%- for event in data.events %}
+        EventID.{{ event }}: "{{ data.event_uris[event] }}",
+{%- endfor %}
+    }
+    transition_uris: dict[TransitionID, str] = {
+{%- for trans in data.transitions_table %}
+        TransitionID.{{ trans.id }}: "{{ trans.uri }}",
+{%- endfor %}
+    }
+    reaction_uris: dict[ReactionID, str] = {
+{%- for react in data.reactions_table %}
+        ReactionID.{{ react.id }}: "{{ react.uri }}",
+{%- endfor %}
+    }
+
+    # Return FSM instance
+    return FSMInstance(
+        fsm=FSMData(
+            event_data=events,
+            num_states=len(StateID),
+            start_state_index=StateID.{{ data.start_state }},
+            end_state_index=StateID.{{ data.end_state }},
+            transitions=trans_list,
+            event_reactions=evt_reaction_list,
+            current_state_index=StateID.{{ data.start_state }},
+        ),
+        state_uris=state_uris,
+        event_uris=event_uris,
+        transition_uris=transition_uris,
+        reaction_uris=reaction_uris,
     )

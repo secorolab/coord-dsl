@@ -1,14 +1,14 @@
 /*
  * This is an auto-generated file. Do not edit it directly.
  *
- * FSM: {{ data.name }}
- * FSM Description: {{ data.description }}
+ * FSM: find-unscrew-fsm
+ * FSM Description: Coordinate find -> loosen via motion monitor events
  *
  * -----------------------------------------------------
  * Usage example:
  * -----------------------------------------------------
 
-#include "{{ data.name }}.fsm.hpp"
+#include "find-unscrew-fsm.fsm.hpp"
 
 struct user_data {
 
@@ -49,8 +49,8 @@ int main() {
  * -----------------------------------------------------
  */
 
-#ifndef {{ data.name.upper() }}_FSM_HPP
-#define {{ data.name.upper()  }}_FSM_HPP
+#ifndef FIND-UNSCREW-FSM_FSM_HPP
+#define FIND-UNSCREW-FSM_FSM_HPP
 
 #include "coord2b/types/fsm.h"
 #include "coord2b/types/event_loop.h"
@@ -61,58 +61,40 @@ void destroy_fsm(struct fsm_nbx * fsm);
 
 // sm states
 enum e_states {
-{%- for state in data.states %}
-    {{ state }}{% if loop.first %} = 0{% endif %},
-{%- endfor %}
+    S_START = 0,
+    S_CONFIGURE,
+    S_FIND,
+    S_LOOSEN,
+    S_EXIT,
     NUM_STATES
-};
-
-static constexpr const char * STATE_URIS[NUM_STATES] = {
-{%- for state in data.states %}
-    "{{ data.state_uris[state] }}",
-{%- endfor %}
 };
 
 // sm events
 enum e_events {
-{%- for event in data.events %}
-    {{ event }}{% if loop.first %} = 0{% endif %},
-{%- endfor %}
+    E_CONFIGURED = 0,
+    evt_rotation_limit_reached,
+    evt_torque_upper_limit_reached,
+    E_LOOSEN_DONE,
     NUM_EVENTS
-};
-
-static constexpr const char * EVENT_URIS[NUM_EVENTS] = {
-{%- for event in data.events %}
-    "{{ data.event_uris[event] }}",
-{%- endfor %}
 };
 
 // sm transitions
 enum e_transitions {
-{%- for transition in data.transitions_table %}
-    {{ transition.id }}{% if loop.first %} = 0{% endif %},
-{%- endfor %}
+    T_START_CONFIGURE = 0,
+    T_CONFIGURE_FIND,
+    T_FIND_LOOSEN,
+    T_FIND_EXIT,
+    T_LOOSEN_EXIT,
     NUM_TRANSITIONS
-};
-
-static constexpr const char * TRANSITION_URIS[NUM_TRANSITIONS] = {
-{%- for trans in data.transitions_table %}
-    "{{ trans.uri }}",
-{%- endfor %}
 };
 
 // sm reactions
 enum e_reactions {
-{%- for reaction in data.reactions_table %}
-    {{ reaction.id }}{% if loop.first %} = 0{% endif %},
-{%- endfor %}
+    R_CONFIGURED = 0,
+    R_ROTATION_LIMIT,
+    R_TORQUE_UPPER,
+    R_LOOSEN_DONE,
     NUM_REACTIONS
-};
-
-static constexpr const char * REACTION_URIS[NUM_REACTIONS] = {
-{%- for react in data.reactions_table %}
-    "{{ react.uri }}",
-{%- endfor %}
 };
 
 inline struct fsm_nbx * create_fsm() {
@@ -122,9 +104,9 @@ inline struct fsm_nbx * create_fsm() {
         .numTransitions = NUM_TRANSITIONS,
         .numStates = NUM_STATES,
         .states = nullptr,
-        .startStateIndex = {{ data.start_state }},
-        .endStateIndex = {{ data.end_state }},
-        .currentStateIndex = {{ data.start_state }},
+        .startStateIndex = S_START,
+        .endStateIndex = S_EXIT,
+        .currentStateIndex = S_START,
         .eventData = nullptr,
         .reactions = nullptr,
         .transitions = nullptr
@@ -133,40 +115,67 @@ inline struct fsm_nbx * create_fsm() {
 
     // sm states
     struct state * states = new (std::nothrow) state[NUM_STATES]{
-    {%- for state in data.states %}
-        {.name = "{{ state.capitalize() }}"}{% if loop.last %} {% else %}, {% endif %}
-    {%- endfor %}
+        {.name = "S_start"}, 
+        {.name = "S_configure"}, 
+        {.name = "S_find"}, 
+        {.name = "S_loosen"}, 
+        {.name = "S_exit"} 
     };
 
     // sm transition table
     struct transition * transitions = new (std::nothrow) transition[NUM_TRANSITIONS]{
-    {%- for transition in data.transitions_table %}
         {
-            .startStateIndex = {{ transition.from_state }},
-            .endStateIndex = {{ transition.to_state }},
-        }{% if loop.last %} {% else %}, {% endif %}
-    {%- endfor %}
+            .startStateIndex = S_START,
+            .endStateIndex = S_CONFIGURE,
+        }, 
+        {
+            .startStateIndex = S_CONFIGURE,
+            .endStateIndex = S_FIND,
+        }, 
+        {
+            .startStateIndex = S_FIND,
+            .endStateIndex = S_LOOSEN,
+        }, 
+        {
+            .startStateIndex = S_FIND,
+            .endStateIndex = S_EXIT,
+        }, 
+        {
+            .startStateIndex = S_LOOSEN,
+            .endStateIndex = S_EXIT,
+        } 
     };
 
     // sm reaction table
     struct event_reaction * reactions = new (std::nothrow) event_reaction[NUM_REACTIONS]{
-    {%- for reaction in data.reactions_table %}
         {
-            .conditionEventIndex = {{ reaction.when_event }},
-            .transitionIndex = {{ reaction.do_transition }},
-            .numFiredEvents = {{ reaction.num_fires }},
-    {%- if reaction.fires_events %}
-            .firedEventIndices = new unsigned int[{{ reaction.num_fires }}]{
-    {%- for event in reaction.fires_events %}
-                {{ event }}{% if loop.last %} {% else %}, {% endif %}
-    {%- endfor %}
-            },
-    {%- else %}
+            .conditionEventIndex = E_CONFIGURED,
+            .transitionIndex = T_CONFIGURE_FIND,
+            .numFiredEvents = 0,
             .firedEventIndices = nullptr,
-    {% endif %}
-        }{% if loop.last %} {% else %}, {% endif %}
-    {%- endfor -%}
-    };
+    
+        }, 
+        {
+            .conditionEventIndex = evt_rotation_limit_reached,
+            .transitionIndex = T_FIND_LOOSEN,
+            .numFiredEvents = 0,
+            .firedEventIndices = nullptr,
+    
+        }, 
+        {
+            .conditionEventIndex = evt_torque_upper_limit_reached,
+            .transitionIndex = T_FIND_EXIT,
+            .numFiredEvents = 0,
+            .firedEventIndices = nullptr,
+    
+        }, 
+        {
+            .conditionEventIndex = E_LOOSEN_DONE,
+            .transitionIndex = T_LOOSEN_EXIT,
+            .numFiredEvents = 0,
+            .firedEventIndices = nullptr,
+    
+        } };
 
     if (!states || !transitions || !reactions) {
         delete[] states;
@@ -242,4 +251,4 @@ inline void destroy_fsm(struct fsm_nbx * fsm) {
     delete fsm;
 }
 
-#endif // {{ data.name.upper()  }}_FSM_HPP
+#endif // FIND-UNSCREW-FSM_FSM_HPP

@@ -1,0 +1,47 @@
+ns rob = "https://secorolab.github.io/models/find-unscrew/"
+
+FSM (ns=rob) find-unscrew-fsm {
+DESCRIPTION: "Coordinate find -> loosen via motion monitor events"
+
+STATES: S-START, S-CONFIGURE, S-FIND, S-LOOSEN, S-EXIT
+
+START_STATE: @S-START
+END_STATE:   @S-EXIT
+
+EVENTS:
+    E-CONFIGURED,
+    evt-rotation-limit-reached,
+    evt-torque-upper-limit-reached,
+    E-LOOSEN-DONE
+
+TRANSITIONS:
+    T-START-CONFIGURE:
+        FROM: @S-START
+        TO:   @S-CONFIGURE
+    T-CONFIGURE-FIND:
+        FROM: @S-CONFIGURE
+        TO:   @S-FIND
+    T-FIND-LOOSEN:
+        FROM: @S-FIND
+        TO:   @S-LOOSEN
+    T-FIND-EXIT:
+        FROM: @S-FIND
+        TO:   @S-EXIT
+    T-LOOSEN-EXIT:
+        FROM: @S-LOOSEN
+        TO:   @S-EXIT
+
+REACTIONS:
+    R-CONFIGURED:
+        WHEN: @E-CONFIGURED
+        DO:   @T-CONFIGURE-FIND
+    R-ROTATION-LIMIT:
+        WHEN: @evt-rotation-limit-reached
+        DO:   @T-FIND-LOOSEN
+    R-TORQUE-UPPER:
+        WHEN: @evt-torque-upper-limit-reached
+        DO:   @T-FIND-EXIT
+    R-LOOSEN-DONE:
+        WHEN: @E-LOOSEN-DONE
+        DO:   @T-LOOSEN-EXIT
+}

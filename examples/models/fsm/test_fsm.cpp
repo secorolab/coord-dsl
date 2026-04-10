@@ -39,9 +39,9 @@ int main()
         now = clock::now();
         if (now > next_print) {
             next_print += print_period;
-            std::cout << "State: " << fsm->states[fsm->currentStateIndex].name << std::endl;
+            std::cout << "State: " << fsm->states[fsm->currentStateIndex].name
+                      << " (" << STATE_URIS[fsm->currentStateIndex] << ")" << std::endl;
 
-            // simple inline behaviour to go through all states
             if (fsm->currentStateIndex == S_CONFIGURE) {
                 produce_event(fsm->eventData, E_CONFIGURE_EXIT);
             } else if (fsm->currentStateIndex == S_IDLE) {
