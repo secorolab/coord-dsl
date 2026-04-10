@@ -135,7 +135,7 @@ REACTIONS:
 textx generate example.fsm --target cpp -o model.hpp
 textx generate example.fsm --target python -o model.py
 textx generate example.fsm --target graph --format json-ld --autocompact
-textx generate example.fsm --target file --format ttl --autocompact
+textx generate example.fsm --target console --format ttl --autocompact
 ```
 
 * Generates a C++ header file with the data structures required for the FSM, along with a sample implementation code.

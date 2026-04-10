@@ -8,7 +8,9 @@
  * Usage example:
  * -----------------------------------------------------
 
-#include "ex_fsm.fsm.hpp"
+#include "coord2b/functions/event_loop.h"
+#include "coord2b/functions/fsm.h"
+#include "ex_fsm.hpp"
 
 struct user_data {
 
@@ -17,11 +19,11 @@ struct user_data {
 void yyyy_behavior(struct user_data *userData, struct events *eventData) {
     // ... do something
 
-    produce_event(eventData, E_ZZZZ);
+    produce_event(eventData, ex_fsm::E_ZZZZ);
 }
 
 void fsm_behavior(struct events *eventData, struct user_data *userData) {
-    if (consume_event(eventData, E_XXXX)) {
+    if (consume_event(eventData, ex_fsm::E_XXXX)) {
         yyyy_behavior(userData, eventData);
     }
     ...
@@ -30,11 +32,11 @@ void fsm_behavior(struct events *eventData, struct user_data *userData) {
 int main() {
 
     struct user_data userData = {};
-    struct fsm_nbx *fsm = create_fsm();
+    struct fsm_nbx *fsm = ex_fsm::create_fsm();
     if (!fsm) return 1;
 
     while (true) {
-        produce_event(fsm->eventData, E_STEP);
+        produce_event(fsm->eventData, ex_fsm::E_STEP);
 
         // run state machine, event loop
         fsm_behavior(fsm->eventData, &userData);
@@ -42,19 +44,22 @@ int main() {
         reconfig_event_buffers(fsm->eventData);
     }
 
-    destroy_fsm(fsm);
+    ex_fsm::destroy_fsm(fsm);
     return 0;
 }
 
  * -----------------------------------------------------
  */
 
-#ifndef EX_FSM_FSM_HPP
-#define EX_FSM_FSM_HPP
+#ifndef EX_FSM_HPP
+#define EX_FSM_HPP
 
 #include "coord2b/types/fsm.h"
 #include "coord2b/types/event_loop.h"
 #include <new>
+
+
+namespace ex_fsm {
 
 struct fsm_nbx * create_fsm();
 void destroy_fsm(struct fsm_nbx * fsm);
@@ -157,131 +162,129 @@ static constexpr const char * REACTION_URIS[NUM_REACTIONS] = {
 
 inline struct fsm_nbx * create_fsm() {
 
-    struct fsm_nbx * fsm = new (std::nothrow) fsm_nbx{
-        .numReactions = NUM_REACTIONS,
-        .numTransitions = NUM_TRANSITIONS,
-        .numStates = NUM_STATES,
-        .states = nullptr,
-        .startStateIndex = S_START,
-        .endStateIndex = S_EXIT,
+    struct fsm_nbx * fsm   = new (std::nothrow) fsm_nbx{
+        .numReactions      = NUM_REACTIONS,
+        .numTransitions    = NUM_TRANSITIONS,
+        .numStates         = NUM_STATES,
+        .states            = nullptr,
+        .startStateIndex   = S_START,
+        .endStateIndex     = S_EXIT,
         .currentStateIndex = S_START,
-        .eventData = nullptr,
-        .reactions = nullptr,
-        .transitions = nullptr
+        .eventData         = nullptr,
+        .reactions         = nullptr,
+        .transitions       = nullptr
     };
     if (!fsm) return nullptr;
 
     // sm states
     struct state * states = new (std::nothrow) state[NUM_STATES]{
-        {.name = "S_start"}, 
-        {.name = "S_configure"}, 
-        {.name = "S_idle"}, 
-        {.name = "S_compile"}, 
-        {.name = "S_execute"}, 
-        {.name = "S_exit"} 
+        {.name = "S_start"},
+        {.name = "S_configure"},
+        {.name = "S_idle"},
+        {.name = "S_compile"},
+        {.name = "S_execute"},
+        {.name = "S_exit"}
     };
 
     // sm transition table
     struct transition * transitions = new (std::nothrow) transition[NUM_TRANSITIONS]{
         {
             .startStateIndex = S_START,
-            .endStateIndex = S_CONFIGURE,
-        }, 
+            .endStateIndex   = S_CONFIGURE,
+        },
         {
             .startStateIndex = S_CONFIGURE,
-            .endStateIndex = S_IDLE,
-        }, 
+            .endStateIndex   = S_IDLE,
+        },
         {
             .startStateIndex = S_IDLE,
-            .endStateIndex = S_IDLE,
-        }, 
+            .endStateIndex   = S_IDLE,
+        },
         {
             .startStateIndex = S_IDLE,
-            .endStateIndex = S_EXECUTE,
-        }, 
+            .endStateIndex   = S_EXECUTE,
+        },
         {
             .startStateIndex = S_IDLE,
-            .endStateIndex = S_COMPILE,
-        }, 
+            .endStateIndex   = S_COMPILE,
+        },
         {
             .startStateIndex = S_COMPILE,
-            .endStateIndex = S_EXECUTE,
-        }, 
+            .endStateIndex   = S_EXECUTE,
+        },
         {
             .startStateIndex = S_EXECUTE,
-            .endStateIndex = S_EXECUTE,
-        }, 
+            .endStateIndex   = S_EXECUTE,
+        },
         {
             .startStateIndex = S_EXECUTE,
-            .endStateIndex = S_IDLE,
-        } 
+            .endStateIndex   = S_IDLE,
+        }
     };
 
     // sm reaction table
     struct event_reaction * reactions = new (std::nothrow) event_reaction[NUM_REACTIONS]{
         {
             .conditionEventIndex = E_CONFIGURE_EXIT,
-            .transitionIndex = T_CONFIGURE_IDLE,
-            .numFiredEvents = 1,
-            .firedEventIndices = new unsigned int[1]{
-                E_IDLE_ENTERED 
-            },
-        }, 
+            .transitionIndex     = T_CONFIGURE_IDLE,
+            .numFiredEvents      = 1,
+            .firedEventIndices   = new unsigned int[1]{
+                                     E_IDLE_ENTERED
+                                   },
+        },
         {
             .conditionEventIndex = E_IDLE_EXIT_EXECUTE,
-            .transitionIndex = T_IDLE_EXECUTE,
-            .numFiredEvents = 1,
-            .firedEventIndices = new unsigned int[1]{
-                E_EXECUTE_ENTERED 
-            },
-        }, 
+            .transitionIndex     = T_IDLE_EXECUTE,
+            .numFiredEvents      = 1,
+            .firedEventIndices   = new unsigned int[1]{
+                                     E_EXECUTE_ENTERED
+                                   },
+        },
         {
             .conditionEventIndex = E_IDLE_EXIT_COMPILE,
-            .transitionIndex = T_IDLE_COMPILE,
-            .numFiredEvents = 1,
-            .firedEventIndices = new unsigned int[1]{
-                E_COMPILE_ENTERED 
-            },
-        }, 
+            .transitionIndex     = T_IDLE_COMPILE,
+            .numFiredEvents      = 1,
+            .firedEventIndices   = new unsigned int[1]{
+                                     E_COMPILE_ENTERED
+                                   },
+        },
         {
             .conditionEventIndex = E_COMPILE_EXIT,
-            .transitionIndex = T_COMPILE_EXECUTE,
-            .numFiredEvents = 1,
-            .firedEventIndices = new unsigned int[1]{
-                E_EXECUTE_ENTERED 
-            },
-        }, 
+            .transitionIndex     = T_COMPILE_EXECUTE,
+            .numFiredEvents      = 1,
+            .firedEventIndices   = new unsigned int[1]{
+                                     E_EXECUTE_ENTERED
+                                   },
+        },
         {
             .conditionEventIndex = E_EXECUTE_EXIT,
-            .transitionIndex = T_EXECUTE_IDLE,
-            .numFiredEvents = 1,
-            .firedEventIndices = new unsigned int[1]{
-                E_IDLE_ENTERED 
-            },
-        }, 
+            .transitionIndex     = T_EXECUTE_IDLE,
+            .numFiredEvents      = 1,
+            .firedEventIndices   = new unsigned int[1]{
+                                     E_IDLE_ENTERED
+                                   },
+        },
         {
             .conditionEventIndex = E_STEP,
-            .transitionIndex = T_START_CONFIGURE,
-            .numFiredEvents = 2,
-            .firedEventIndices = new unsigned int[2]{
-                E_CONFIGURE_ENTERED, 
-                E_STEP 
-            },
-        }, 
+            .transitionIndex     = T_START_CONFIGURE,
+            .numFiredEvents      = 2,
+            .firedEventIndices   = new unsigned int[2]{
+                                     E_CONFIGURE_ENTERED,
+                                     E_STEP
+                                   },
+        },
         {
             .conditionEventIndex = E_STEP,
-            .transitionIndex = T_IDLE_IDLE,
-            .numFiredEvents = 0,
-            .firedEventIndices = nullptr,
-    
-        }, 
+            .transitionIndex     = T_IDLE_IDLE,
+            .numFiredEvents      = 0,
+            .firedEventIndices   = nullptr,
+        },
         {
             .conditionEventIndex = E_STEP,
-            .transitionIndex = T_EXECUTE_EXECUTE,
-            .numFiredEvents = 0,
-            .firedEventIndices = nullptr,
-    
-        } };
+            .transitionIndex     = T_EXECUTE_EXECUTE,
+            .numFiredEvents      = 0,
+            .firedEventIndices   = nullptr,
+        }};
 
     if (!states || !transitions || !reactions) {
         delete[] states;
@@ -323,14 +326,14 @@ inline struct fsm_nbx * create_fsm() {
         delete fsm;
         return nullptr;
     }
-    eventData->numEvents = NUM_EVENTS;
+    eventData->numEvents     = NUM_EVENTS;
     eventData->currentEvents = currentEvents;
-    eventData->futureEvents = futureEvents;
+    eventData->futureEvents  = futureEvents;
 
     // sm fsm struct
-    fsm->states = states;
-    fsm->eventData = eventData;
-    fsm->reactions = reactions;
+    fsm->states      = states;
+    fsm->eventData   = eventData;
+    fsm->reactions   = reactions;
     fsm->transitions = transitions;
 
     return fsm;
@@ -357,4 +360,6 @@ inline void destroy_fsm(struct fsm_nbx * fsm) {
     delete fsm;
 }
 
-#endif // EX_FSM_FSM_HPP
+} // namespace ex_fsm
+
+#endif // EX_FSM_HPP

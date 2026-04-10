@@ -14,7 +14,7 @@ from coord_dsl.event_loop import (
     reconfig_event_buffers,
 )
 from coord_dsl.fsm import FSMData, fsm_step
-from ex_fsm import EventID, StateID, FSMInstance, create_fsm
+from ex_fsm import EventID, StateID, create_fsm, STATE_URIS
 
 
 LOOP_DURATION = 0.01
@@ -38,7 +38,7 @@ class UserData:
 
 
 def generic_on_end(fsm: FSMData, ud: UserData, end_events: list[EventID]):
-    print(f"State '{StateID(fsm.current_state_index).name}' finished")
+    # print(f"State '{StateID(fsm.current_state_index).name}' finished")
     for evt in end_events:
         produce_event(fsm.event_data, evt)
 
@@ -56,7 +56,7 @@ def idle_on_end(fsm: FSMData, ud: UserData):
 def generic_step(fsm: FSMData, ud: UserData, start_event: EventID) -> bool:
     """Return True if timeout has occurred, i.e., state finished."""
     if consume_event(fsm.event_data, start_event):
-        print(f"Entered state '{StateID(fsm.current_state_index).name}'")
+        print(f"State: {StateID(fsm.current_state_index).name} ({STATE_URIS[StateID(fsm.current_state_index)]})")
 
     ud.current_time = time.time()
     assert ud.transition_time is not None
@@ -88,13 +88,8 @@ def fsm_behavior(fsm: FSMData, ud: UserData, bhv_data: dict):
 def main(state_duration_sec: float):
     signal.signal(signal.SIGINT, signal_handler)
 
-    print("Starting generated FSM example. Press Ctrl+C to exit.")
-    instance: FSMInstance = create_fsm()
-    fsm = instance.fsm
-
-    print("State URIs:")
-    for sid, uri in instance.state_uris.items():
-        print(f"  {sid.name} -> {uri}")
+    print("Starting generated FSM example. Press Ctrl+C to exit.\n")
+    fsm: FSMData = create_fsm()
 
     fsm_bhv = {
         StateID.S_CONFIGURE: {
