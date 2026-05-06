@@ -1,37 +1,33 @@
-from collections.abc import Mapping
 from jinja2 import Environment, FileSystemLoader
 from os.path import basename
 from pathlib import Path
-from typing import cast
 from rdflib import Graph, Namespace, Literal, RDF, URIRef
 from rdf_utils.uri import URL_SECORO_MM
 from rdf_utils.naming import get_valid_var_name
 from coord_dsl.generators.classes import FSM
 
 
-def get_fsm_graph(model: object) -> tuple[Graph, dict[str, str | Namespace], URIRef]:
+def get_fsm_graph(model) -> tuple[Graph, dict, URIRef]:
     fsm = getattr(model, "fsm", None)
     assert isinstance(fsm, FSM), "Model does not contain an FSM definition"
 
     URI_MM_FSM = f"{URL_SECORO_MM}/behaviour/fsm#"
-    URI_MM_EL = f"{URL_SECORO_MM}/behaviour/event_loop#"
+    URI_MM_EL  = f"{URL_SECORO_MM}/behaviour/event_loop#"
 
     NS_FSM = Namespace(URI_MM_FSM)
-    NS_EL = Namespace(URI_MM_EL)
+    NS_EL  = Namespace(URI_MM_EL)
 
     g = Graph()
     g.bind("fsm", NS_FSM)
     g.bind("el", NS_EL)
 
-    fsm_name = cast(str | None, getattr(fsm, "name", None))
-    assert fsm_name is not None, "FSM is missing a name"
-    print(f"FSM: {fsm_name}, URI: {fsm.uri}")
-
     NS_MODEL = Namespace(fsm.namespace)
     g.bind(fsm.ns_prefix, NS_MODEL)
 
+    assert fsm.uri is not None, "FSM must have a URI"
+
     g.add((fsm.uri, RDF.type, NS_FSM.FSM))
-    g.add((fsm.uri, NS_FSM.name, Literal(fsm_name)))
+    g.add((fsm.uri, NS_FSM.name, Literal(fsm.name)))
     if fsm.description is not None:
         g.add((fsm.uri, NS_FSM.description, Literal(fsm.description)))
 
@@ -61,8 +57,8 @@ def get_fsm_graph(model: object) -> tuple[Graph, dict[str, str | Namespace], URI
         g.add((URIRef(reaction.uri), RDF.type, NS_FSM.Reaction))
         g.add((fsm.uri, NS_FSM.reactions, URIRef(reaction.uri)))
 
-        when = reaction.when.uri
-        do = reaction.do.uri
+        when  = reaction.when.uri
+        do    = reaction.do.uri
         fires = [f.event.uri for f in reaction.fires if f.event is not None]
 
         g.add((URIRef(reaction.uri), NS_FSM["when-event"], URIRef(when)))
@@ -72,124 +68,118 @@ def get_fsm_graph(model: object) -> tuple[Graph, dict[str, str | Namespace], URI
 
     # jsonld context
     context = {
-        "fsm": URI_MM_FSM,
-        "el": URI_MM_EL,
+        "fsm":         URI_MM_FSM,
+        "el":          URI_MM_EL,
         fsm.ns_prefix: NS_MODEL,
     }
     return g, context, fsm.uri
 
 
-def iri_basename(uri: str) -> str:
+def local_name(uri: str) -> str:
     return basename(uri.replace("#", "/").rstrip("/"))
 
 
-def gen_json(g: Graph, fsm_ref: URIRef) -> dict[str, object]:
+def gen_json(g: Graph, fsm_ref: URIRef) -> dict:
     URI_MM_FSM = f"{URL_SECORO_MM}/behaviour/fsm#"
-    NS_FSM = Namespace(URI_MM_FSM)
+    NS_FSM     = Namespace(URI_MM_FSM)
 
-    name = str(g.value(fsm_ref, NS_FSM.name))
+    assert isinstance(fsm_ref, URIRef)
+
+    name_node = g.value(fsm_ref, NS_FSM.name)
+    assert name_node is not None
+    name = str(name_node)
     description_node = g.value(fsm_ref, NS_FSM.description)
     description = str(description_node) if description_node is not None else None
 
     start_state_node = g.value(fsm_ref, NS_FSM["start-state"])
-    assert start_state_node is not None, "FSM graph missing start state"
-    start_state = get_valid_var_name(iri_basename(str(start_state_node))).upper()
+    assert isinstance(start_state_node, URIRef)
+    start_state = get_valid_var_name(local_name(start_state_node.toPython())).upper()
 
     end_state_node = g.value(fsm_ref, NS_FSM["end-state"])
-    assert end_state_node is not None, "FSM graph missing end state"
-    end_state = get_valid_var_name(iri_basename(str(end_state_node))).upper()
+    assert isinstance(end_state_node, URIRef)
+    end_state = get_valid_var_name(local_name(end_state_node.toPython())).upper()
 
-    states: list[str] = []
-    state_uris: dict[str, str] = {}
+    states = []
+    state_uris = {}
     for _, _, state_uri in g.triples((fsm_ref, NS_FSM.states, None)):
-        uri_s = str(state_uri)
-        ident = get_valid_var_name(iri_basename(uri_s)).upper()
+        assert isinstance(state_uri, URIRef)
+        uri_s = state_uri.toPython()
+        ident = get_valid_var_name(local_name(uri_s)).upper()
         states.append(ident)
         state_uris[ident] = uri_s
 
-    events: list[str] = []
-    event_uris: dict[str, str] = {}
+    events = []
+    event_uris = {}
     for _, _, event_uri in g.triples((fsm_ref, NS_FSM.events, None)):
-        uri_s = str(event_uri)
-        ident = get_valid_var_name(iri_basename(uri_s)).upper()
+        assert isinstance(event_uri, URIRef)
+        uri_s = event_uri.toPython()
+        ident = get_valid_var_name(local_name(uri_s)).upper()
         events.append(ident)
         event_uris[ident] = uri_s
 
-    transitions_table: list[dict[str, str]] = []
+    transitions_table = []
     for _, _, tr_uri in g.triples((fsm_ref, NS_FSM.transitions, None)):
-        uri_s = str(tr_uri)
+        assert isinstance(tr_uri, URIRef)
+        uri_s = tr_uri.toPython()
         from_state_node = g.value(tr_uri, NS_FSM["transition-from"])
-        assert from_state_node is not None, "FSM graph missing transition source"
-        assert isinstance(from_state_node, URIRef), (
-            "FSM transition source must be a URIRef"
-        )
-        from_state = get_valid_var_name(iri_basename(str(from_state_node))).upper()
-
+        assert isinstance(from_state_node, URIRef)
+        from_state = get_valid_var_name(local_name(from_state_node.toPython())).upper()
         to_state_node = g.value(tr_uri, NS_FSM["transition-to"])
-        assert to_state_node is not None, "FSM graph missing transition target"
-        assert isinstance(to_state_node, URIRef), (
-            "FSM transition target must be a URIRef"
-        )
-        to_state = get_valid_var_name(iri_basename(str(to_state_node))).upper()
+        assert isinstance(to_state_node, URIRef)
+        to_state = get_valid_var_name(local_name(to_state_node.toPython())).upper()
         transitions_table.append(
             {
-                "id": get_valid_var_name(iri_basename(uri_s)).upper(),
-                "uri": uri_s,
+                "id":         get_valid_var_name(local_name(uri_s)).upper(),
+                "uri":        uri_s,
                 "from_state": from_state,
-                "to_state": to_state,
+                "to_state":   to_state,
             }
         )
 
-    reactions_table: list[dict[str, str | int | list[str]]] = []
+    reactions_table = []
     for _, _, rx_uri in g.triples((fsm_ref, NS_FSM.reactions, None)):
-        uri_s = str(rx_uri)
+        assert isinstance(rx_uri, URIRef)
+        uri_s = rx_uri.toPython()
         when_event_node = g.value(rx_uri, NS_FSM["when-event"])
-        assert when_event_node is not None, "FSM graph missing reaction trigger"
-        assert isinstance(when_event_node, URIRef), (
-            "FSM reaction trigger must be a URIRef"
-        )
-        when_event = get_valid_var_name(iri_basename(str(when_event_node))).upper()
-
+        assert isinstance(when_event_node, URIRef)
+        when_event = get_valid_var_name(local_name(when_event_node.toPython())).upper()
         do_transition_node = g.value(rx_uri, NS_FSM["do-transition"])
-        assert do_transition_node is not None, "FSM graph missing reaction transition"
-        assert isinstance(do_transition_node, URIRef), (
-            "FSM reaction transition must be a URIRef"
-        )
+        assert isinstance(do_transition_node, URIRef)
         do_transition = get_valid_var_name(
-            iri_basename(str(do_transition_node))
+            local_name(do_transition_node.toPython())
         ).upper()
-        fires = [
-            get_valid_var_name(iri_basename(str(ev_uri))).upper()
-            for _, _, ev_uri in g.triples((rx_uri, NS_FSM["fires-events"], None))
-        ]
+        fires = []
+        for _, _, ev_uri in g.triples((rx_uri, NS_FSM["fires-events"], None)):
+            assert isinstance(ev_uri, URIRef)
+            fires.append(get_valid_var_name(local_name(ev_uri.toPython())).upper())
         reactions_table.append(
             {
-                "id": get_valid_var_name(iri_basename(uri_s)).upper(),
-                "uri": uri_s,
-                "when_event": when_event,
+                "id":            get_valid_var_name(local_name(uri_s)).upper(),
+                "uri":           uri_s,
+                "when_event":    when_event,
                 "do_transition": do_transition,
-                "fires_events": fires,
-                "num_fires": len(fires),
+                "fires_events":  fires,
+                "num_fires":     len(fires),
             }
         )
 
-    result: dict[str, object] = {
-        "name": name,
-        "description": description,
-        "start_state": start_state,
-        "end_state": end_state,
-        "states": states,
-        "state_uris": state_uris,
-        "events": events,
-        "event_uris": event_uris,
+    result = {
+        "name":              name,
+        "description":       description,
+        "start_state":       start_state,
+        "end_state":         end_state,
+        "states":            states,
+        "state_uris":        state_uris,
+        "events":            events,
+        "event_uris":        event_uris,
         "transitions_table": transitions_table,
-        "reactions_table": reactions_table,
+        "reactions_table":   reactions_table,
     }
 
     return result
 
 
-def gen_cpp_header(ir: Mapping[str, object]) -> str:
+def gen_cpp_header(ir: dict):
     """Generates a .hpp file with the FSM datastructures"""
 
     print(f"Generating C code for FSM: {ir['name']}")
@@ -208,7 +198,7 @@ def gen_cpp_header(ir: Mapping[str, object]) -> str:
     return output
 
 
-def gen_python_code(ir: Mapping[str, object]) -> str:
+def gen_python_code(ir: dict):
     """Generates a .py file with the FSM datastructures"""
 
     print(f"Generating Python code for FSM: {ir['name']}")

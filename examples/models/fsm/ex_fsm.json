@@ -6,38 +6,39 @@
   },
   "@graph": [
     {
-      "@id": "ex:R_E_STEP1",
-      "@type": "fsm:Reaction",
-      "fsm:do-transition": {
-        "@id": "ex:T_START_CONFIGURE"
-      },
-      "fsm:fires-events": [
-        {
-          "@id": "ex:E-CONFIGURE-ENTERED"
-        },
-        {
-          "@id": "ex:e-step"
-        }
-      ],
-      "fsm:when-event": {
-        "@id": "ex:e-step"
-      }
-    },
-    {
-      "@id": "ex:S_START",
+      "@id": "ex:S_EXIT",
       "@type": "fsm:State"
     },
     {
-      "@id": "ex:R_E_CONFIGURE_EXIT",
-      "@type": "fsm:Reaction",
-      "fsm:do-transition": {
-        "@id": "ex:T_CONFIGURE_IDLE"
+      "@id": "ex:E-CONFIGURE-EXIT",
+      "@type": "el:Event"
+    },
+    {
+      "@id": "ex:E-CONFIGURE-ENTERED",
+      "@type": "el:Event"
+    },
+    {
+      "@id": "ex:T_IDLE_IDLE",
+      "@type": "fsm:Transition",
+      "fsm:transition-from": {
+        "@id": "ex:S_IDLE"
       },
-      "fsm:fires-events": {
-        "@id": "ex:E_IDLE_ENTERED"
+      "fsm:transition-to": {
+        "@id": "ex:S_IDLE"
+      }
+    },
+    {
+      "@id": "ex:E_IDLE_ENTERED",
+      "@type": "el:Event"
+    },
+    {
+      "@id": "ex:T_COMPILE_EXECUTE",
+      "@type": "fsm:Transition",
+      "fsm:transition-from": {
+        "@id": "ex:S-COMPILE"
       },
-      "fsm:when-event": {
-        "@id": "ex:E-CONFIGURE-EXIT"
+      "fsm:transition-to": {
+        "@id": "ex:S_EXECUTE"
       }
     },
     {
@@ -51,52 +52,21 @@
       }
     },
     {
-      "@id": "ex:T_COMPILE_EXECUTE",
-      "@type": "fsm:Transition",
-      "fsm:transition-from": {
-        "@id": "ex:S-COMPILE"
-      },
-      "fsm:transition-to": {
-        "@id": "ex:S_EXECUTE"
-      }
+      "@id": "ex:e-step",
+      "@type": "el:Event"
     },
     {
-      "@id": "ex:R_E_STEP2",
+      "@id": "ex:R_E_IDLE_EXIT_COMPILE",
       "@type": "fsm:Reaction",
       "fsm:do-transition": {
-        "@id": "ex:T_IDLE_IDLE"
+        "@id": "ex:T_IDLE_COMPILE"
+      },
+      "fsm:fires-events": {
+        "@id": "ex:E-COMPILE-ENTERED"
       },
       "fsm:when-event": {
-        "@id": "ex:e-step"
+        "@id": "ex:E_IDLE_EXIT_COMPILE"
       }
-    },
-    {
-      "@id": "ex:T_IDLE_COMPILE",
-      "@type": "fsm:Transition",
-      "fsm:transition-from": {
-        "@id": "ex:S_IDLE"
-      },
-      "fsm:transition-to": {
-        "@id": "ex:S-COMPILE"
-      }
-    },
-    {
-      "@id": "ex:T_IDLE_EXECUTE",
-      "@type": "fsm:Transition",
-      "fsm:transition-from": {
-        "@id": "ex:S_IDLE"
-      },
-      "fsm:transition-to": {
-        "@id": "ex:S_EXECUTE"
-      }
-    },
-    {
-      "@id": "ex:S-COMPILE",
-      "@type": "fsm:State"
-    },
-    {
-      "@id": "ex:E_EXECUTE_ENTERED",
-      "@type": "el:Event"
     },
     {
       "@id": "ex:R_E_EXECUTE_EXIT",
@@ -112,8 +82,93 @@
       }
     },
     {
-      "@id": "ex:E-CONFIGURE-EXIT",
+      "@id": "ex:R_E_CONFIGURE_EXIT",
+      "@type": "fsm:Reaction",
+      "fsm:do-transition": {
+        "@id": "ex:T_CONFIGURE_IDLE"
+      },
+      "fsm:fires-events": {
+        "@id": "ex:E_IDLE_ENTERED"
+      },
+      "fsm:when-event": {
+        "@id": "ex:E-CONFIGURE-EXIT"
+      }
+    },
+    {
+      "@id": "ex:E-COMPILE-EXIT",
       "@type": "el:Event"
+    },
+    {
+      "@id": "ex:S_EXECUTE",
+      "@type": "fsm:State"
+    },
+    {
+      "@id": "ex:T_IDLE_EXECUTE",
+      "@type": "fsm:Transition",
+      "fsm:transition-from": {
+        "@id": "ex:S_IDLE"
+      },
+      "fsm:transition-to": {
+        "@id": "ex:S_EXECUTE"
+      }
+    },
+    {
+      "@id": "ex:S_IDLE",
+      "@type": "fsm:State"
+    },
+    {
+      "@id": "ex:R_E_COMPILE_EXIT",
+      "@type": "fsm:Reaction",
+      "fsm:do-transition": {
+        "@id": "ex:T_COMPILE_EXECUTE"
+      },
+      "fsm:fires-events": {
+        "@id": "ex:E_EXECUTE_ENTERED"
+      },
+      "fsm:when-event": {
+        "@id": "ex:E-COMPILE-EXIT"
+      }
+    },
+    {
+      "@id": "ex:R_E_STEP3",
+      "@type": "fsm:Reaction",
+      "fsm:do-transition": {
+        "@id": "ex:T_EXECUTE_EXECUTE"
+      },
+      "fsm:when-event": {
+        "@id": "ex:e-step"
+      }
+    },
+    {
+      "@id": "ex:R_E_IDLE_EXIT_EXECUTE",
+      "@type": "fsm:Reaction",
+      "fsm:do-transition": {
+        "@id": "ex:T_IDLE_EXECUTE"
+      },
+      "fsm:fires-events": {
+        "@id": "ex:E_EXECUTE_ENTERED"
+      },
+      "fsm:when-event": {
+        "@id": "ex:E_IDLE_EXIT_EXECUTE"
+      }
+    },
+    {
+      "@id": "ex:E_IDLE_EXIT_COMPILE",
+      "@type": "el:Event"
+    },
+    {
+      "@id": "ex:E_IDLE_EXIT_EXECUTE",
+      "@type": "el:Event"
+    },
+    {
+      "@id": "ex:T_IDLE_COMPILE",
+      "@type": "fsm:Transition",
+      "fsm:transition-from": {
+        "@id": "ex:S_IDLE"
+      },
+      "fsm:transition-to": {
+        "@id": "ex:S-COMPILE"
+      }
     },
     {
       "@id": "ex:ex_fsm",
@@ -235,55 +290,11 @@
       ]
     },
     {
-      "@id": "ex:E-COMPILE-EXIT",
-      "@type": "el:Event"
+      "@id": "ex:S-CONFIGURE",
+      "@type": "fsm:State"
     },
     {
       "@id": "ex:E-COMPILE-ENTERED",
-      "@type": "el:Event"
-    },
-    {
-      "@id": "ex:E_IDLE_EXIT_EXECUTE",
-      "@type": "el:Event"
-    },
-    {
-      "@id": "ex:S_EXECUTE",
-      "@type": "fsm:State"
-    },
-    {
-      "@id": "ex:T_IDLE_IDLE",
-      "@type": "fsm:Transition",
-      "fsm:transition-from": {
-        "@id": "ex:S_IDLE"
-      },
-      "fsm:transition-to": {
-        "@id": "ex:S_IDLE"
-      }
-    },
-    {
-      "@id": "ex:E_IDLE_EXIT_COMPILE",
-      "@type": "el:Event"
-    },
-    {
-      "@id": "ex:T_EXECUTE_IDLE",
-      "@type": "fsm:Transition",
-      "fsm:transition-from": {
-        "@id": "ex:S_EXECUTE"
-      },
-      "fsm:transition-to": {
-        "@id": "ex:S_IDLE"
-      }
-    },
-    {
-      "@id": "ex:S_EXIT",
-      "@type": "fsm:State"
-    },
-    {
-      "@id": "ex:E_EXECUTE_EXIT",
-      "@type": "el:Event"
-    },
-    {
-      "@id": "ex:E_IDLE_ENTERED",
       "@type": "el:Event"
     },
     {
@@ -297,47 +308,53 @@
       }
     },
     {
-      "@id": "ex:R_E_STEP3",
+      "@id": "ex:S_START",
+      "@type": "fsm:State"
+    },
+    {
+      "@id": "ex:T_EXECUTE_IDLE",
+      "@type": "fsm:Transition",
+      "fsm:transition-from": {
+        "@id": "ex:S_EXECUTE"
+      },
+      "fsm:transition-to": {
+        "@id": "ex:S_IDLE"
+      }
+    },
+    {
+      "@id": "ex:R_E_STEP1",
       "@type": "fsm:Reaction",
       "fsm:do-transition": {
-        "@id": "ex:T_EXECUTE_EXECUTE"
+        "@id": "ex:T_START_CONFIGURE"
       },
+      "fsm:fires-events": [
+        {
+          "@id": "ex:E-CONFIGURE-ENTERED"
+        },
+        {
+          "@id": "ex:e-step"
+        }
+      ],
       "fsm:when-event": {
         "@id": "ex:e-step"
       }
     },
     {
-      "@id": "ex:S_IDLE",
+      "@id": "ex:E_EXECUTE_ENTERED",
+      "@type": "el:Event"
+    },
+    {
+      "@id": "ex:S-COMPILE",
       "@type": "fsm:State"
     },
     {
-      "@id": "ex:S-CONFIGURE",
-      "@type": "fsm:State"
-    },
-    {
-      "@id": "ex:R_E_COMPILE_EXIT",
+      "@id": "ex:R_E_STEP2",
       "@type": "fsm:Reaction",
       "fsm:do-transition": {
-        "@id": "ex:T_COMPILE_EXECUTE"
-      },
-      "fsm:fires-events": {
-        "@id": "ex:E_EXECUTE_ENTERED"
+        "@id": "ex:T_IDLE_IDLE"
       },
       "fsm:when-event": {
-        "@id": "ex:E-COMPILE-EXIT"
-      }
-    },
-    {
-      "@id": "ex:R_E_IDLE_EXIT_COMPILE",
-      "@type": "fsm:Reaction",
-      "fsm:do-transition": {
-        "@id": "ex:T_IDLE_COMPILE"
-      },
-      "fsm:fires-events": {
-        "@id": "ex:E-COMPILE-ENTERED"
-      },
-      "fsm:when-event": {
-        "@id": "ex:E_IDLE_EXIT_COMPILE"
+        "@id": "ex:e-step"
       }
     },
     {
@@ -351,24 +368,7 @@
       }
     },
     {
-      "@id": "ex:R_E_IDLE_EXIT_EXECUTE",
-      "@type": "fsm:Reaction",
-      "fsm:do-transition": {
-        "@id": "ex:T_IDLE_EXECUTE"
-      },
-      "fsm:fires-events": {
-        "@id": "ex:E_EXECUTE_ENTERED"
-      },
-      "fsm:when-event": {
-        "@id": "ex:E_IDLE_EXIT_EXECUTE"
-      }
-    },
-    {
-      "@id": "ex:e-step",
-      "@type": "el:Event"
-    },
-    {
-      "@id": "ex:E-CONFIGURE-ENTERED",
+      "@id": "ex:E_EXECUTE_EXIT",
       "@type": "el:Event"
     }
   ]
