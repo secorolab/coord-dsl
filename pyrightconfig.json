@@ -1,0 +1,22 @@
+{
+  "exclude": [
+    "build",
+    ".venv",
+    "**/.venv"
+  ],
+  "venvPath": "../..",
+  "venv": ".venv",
+  "include": [
+    "src"
+  ],
+  "typeCheckingMode": "strict",
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "extraPaths": [
+        "src",
+        "../rdf-utils/src"
+      ]
+    }
+  ]
+}

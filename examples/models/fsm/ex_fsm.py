@@ -91,7 +91,7 @@ EVENT_URIS: dict[EventID, str] = {
     EventID.E_COMPILE_EXIT: "http://example.org/E-COMPILE-EXIT",
     EventID.E_EXECUTE_ENTERED: "http://example.org/E_EXECUTE_ENTERED",
     EventID.E_EXECUTE_EXIT: "http://example.org/E_EXECUTE_EXIT",
-    EventID.E_STEP: "http://example.org/E_STEP",
+    EventID.E_STEP: "http://example.org/e-step",
 }
 
 TRANSITION_URIS: dict[TransitionID, str] = {

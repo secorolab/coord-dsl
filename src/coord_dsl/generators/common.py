@@ -1,18 +1,28 @@
 # SPDX-License-Identifier: MPL-2.0
 # Author: Minh Nguyen
 
+from typing import cast
+
+from typing import Protocol
+
 from rdflib import Namespace, URIRef
 
 
+class NamespaceDecl(Protocol):
+    name: str
+    uri: str
+
+
 class IHasParent(object):
-    def __init__(self, **kwargs) -> None:
-        self.parent = kwargs.get("parent", None)
-        assert self.parent is not None, f"'parent' not handled for type '{self.__class__.__name__}'"
+    parent: object
+
+    def __init__(self, *, parent: object) -> None:
+        self.parent = parent
 
 
 class IHasNamespace(IHasParent):
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
+    def __init__(self, *, parent: object) -> None:
+        super().__init__(parent=parent)
 
     @property
     def namespace(self) -> Namespace:
@@ -23,17 +33,16 @@ class IHasNamespace(IHasParent):
 
 class IHasNamespaceDeclare(IHasNamespace):
     uri: URIRef
+    ns: NamespaceDecl
+    name: str
     ns_prefix: str
     _ns_obj: Namespace
 
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
-        self.ns = kwargs.get("ns", None)
-        assert self.ns is not None
+    def __init__(self, *, parent: object, ns: NamespaceDecl, name: str) -> None:
+        super().__init__(parent=parent)
+        self.ns = ns
         self.ns_prefix = self.ns.name
-
-        self.name = kwargs.get("name", None)
-        assert self.name is not None
+        self.name = name
 
         self._ns_obj = Namespace(self.ns.uri)
         self.uri = self._ns_obj[self.name]
@@ -44,15 +53,17 @@ class IHasNamespaceDeclare(IHasNamespace):
 
 
 class NamedNamespaceObject(IHasNamespace):
-    def __init__(self, parent, name, **kwargs):
+    name: str
+    _uri: str
+
+    def __init__(self, parent: IHasNamespace, name: str):
         super().__init__(parent=parent)
         self.name = name
         self._uri = ""
 
     @property
     def namespace(self) -> Namespace:
-        assert self.parent is not None, f"'parent' not set for '{self.__class__.__name__}'"
-        return Namespace(self.parent.namespace)
+        return Namespace(cast(IHasNamespace, self.parent).namespace)
 
     @property
     def uri(self) -> str:

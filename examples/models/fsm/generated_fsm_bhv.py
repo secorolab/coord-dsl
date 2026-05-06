@@ -7,7 +7,9 @@ SPDX-License-Identifier: MPL-2.0
 import signal
 import sys
 from dataclasses import dataclass
+from types import FrameType
 import time
+from typing import Callable, NoReturn, TypedDict, TypeAlias
 from coord_dsl.event_loop import (
     produce_event,
     consume_event,
@@ -20,7 +22,8 @@ from ex_fsm import EventID, StateID, create_fsm, STATE_URIS
 LOOP_DURATION = 0.01
 
 
-def signal_handler(sig, frame):
+def signal_handler(sig: int, frame: FrameType | None) -> NoReturn:
+    del sig, frame
     print("You pressed Ctrl+C, exiting!")
     sys.exit(0)
 
@@ -35,6 +38,18 @@ class UserData:
     def __post_init__(self):
         if self.transition_time is None:
             self.transition_time = self.current_time + self.state_duration
+
+
+StepFn: TypeAlias = Callable[[FSMData, UserData], bool]
+OnEndFn: TypeAlias = Callable[[FSMData, UserData], None]
+
+
+class BehaviorEntry(TypedDict, total=False):
+    step: StepFn
+    on_end: OnEndFn
+
+
+BehaviorTable: TypeAlias = dict[StateID, BehaviorEntry]
 
 
 def generic_on_end(fsm: FSMData, ud: UserData, end_events: list[EventID]):
@@ -56,7 +71,9 @@ def idle_on_end(fsm: FSMData, ud: UserData):
 def generic_step(fsm: FSMData, ud: UserData, start_event: EventID) -> bool:
     """Return True if timeout has occurred, i.e., state finished."""
     if consume_event(fsm.event_data, start_event):
-        print(f"State: {StateID(fsm.current_state_index).name} ({STATE_URIS[StateID(fsm.current_state_index)]})")
+        print(
+            f"State: {StateID(fsm.current_state_index).name} ({STATE_URIS[StateID(fsm.current_state_index)]})"
+        )
 
     ud.current_time = time.time()
     assert ud.transition_time is not None
@@ -69,13 +86,15 @@ def generic_step(fsm: FSMData, ud: UserData, start_event: EventID) -> bool:
     return True
 
 
-def fsm_behavior(fsm: FSMData, ud: UserData, bhv_data: dict):
+def fsm_behavior(fsm: FSMData, ud: UserData, bhv_data: BehaviorTable) -> None:
     cs = fsm.current_state_index
+    assert cs is not None
+    state_id = StateID(cs)
     # print(f"Current state: '{StateID(fsm.current_state_index).name}'")
-    if cs not in bhv_data:
+    if state_id not in bhv_data:
         return
 
-    bhv_data_cs = bhv_data[cs]
+    bhv_data_cs = bhv_data[state_id]
     assert "step" in bhv_data_cs, f"no step defined for state: {cs}"
     if not bhv_data_cs["step"](fsm, ud):
         # not done
@@ -85,38 +104,56 @@ def fsm_behavior(fsm: FSMData, ud: UserData, bhv_data: dict):
         bhv_data_cs["on_end"](fsm, ud)
 
 
+def configure_step(fsm: FSMData, ud: UserData) -> bool:
+    return generic_step(fsm, ud, EventID.E_CONFIGURE_ENTERED)
+
+
+def configure_on_end(fsm: FSMData, ud: UserData) -> None:
+    generic_on_end(fsm, ud, [EventID.E_CONFIGURE_EXIT])
+
+
+def idle_step(fsm: FSMData, ud: UserData) -> bool:
+    return generic_step(fsm, ud, EventID.E_IDLE_ENTERED)
+
+
+def compile_step(fsm: FSMData, ud: UserData) -> bool:
+    return generic_step(fsm, ud, EventID.E_COMPILE_ENTERED)
+
+
+def compile_on_end(fsm: FSMData, ud: UserData) -> None:
+    generic_on_end(fsm, ud, [EventID.E_COMPILE_EXIT])
+
+
+def execute_step(fsm: FSMData, ud: UserData) -> bool:
+    return generic_step(fsm, ud, EventID.E_EXECUTE_ENTERED)
+
+
+def execute_on_end(fsm: FSMData, ud: UserData) -> None:
+    generic_on_end(fsm, ud, [EventID.E_EXECUTE_EXIT])
+
+
 def main(state_duration_sec: float):
     signal.signal(signal.SIGINT, signal_handler)
 
     print("Starting generated FSM example. Press Ctrl+C to exit.\n")
     fsm: FSMData = create_fsm()
 
-    fsm_bhv = {
+    fsm_bhv: BehaviorTable = {
         StateID.S_CONFIGURE: {
-            "step": lambda fsm, ud: generic_step(
-                fsm, ud, EventID.E_CONFIGURE_ENTERED
-            ),
-            "on_end": lambda fsm, ud: generic_on_end(
-                fsm, ud, [EventID.E_CONFIGURE_EXIT]
-            ),
+            "step": configure_step,
+            "on_end": configure_on_end,
         },
         StateID.S_IDLE: {
-            "step": lambda fsm, ud: generic_step(
-                fsm, ud, EventID.E_IDLE_ENTERED
-            ),
+            "step": idle_step,
             "on_end": idle_on_end,
         },
         StateID.S_COMPILE: {
-            "step": lambda fsm, ud: generic_step(
-                fsm, ud, EventID.E_COMPILE_ENTERED
-            ),
-            "on_end": lambda fsm, ud: generic_on_end(fsm, ud, [EventID.E_COMPILE_EXIT]),
+            "step": compile_step,
+            "on_end": compile_on_end,
         },
         StateID.S_EXECUTE: {
-            "step": lambda fsm, ud: generic_step(
-                fsm, ud, EventID.E_EXECUTE_ENTERED
-            ),
-            "on_end": lambda fsm, ud: generic_on_end(fsm, ud, [EventID.E_EXECUTE_EXIT]),
+            "step": execute_step,
+            "on_end": execute_on_end,
         },
     }
 

@@ -40,3 +40,6 @@ where = ["src"]
 [ruff]
 line-length = 100
 
+[tool.pyright]
+include = ["src"]
+typeCheckingMode = "strict"
