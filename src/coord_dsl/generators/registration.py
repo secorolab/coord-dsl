@@ -105,8 +105,8 @@ def graph_gen_file(metamodel, model, output_path, overwrite, debug, **kwargs):
     print(f"FSM graph generated at {output_path}")
 
 
-def gen_cpp(_metamodel, model, output_path, _overwrite, _debug, **_kwargs):
-    del _metamodel, _overwrite, _debug, _kwargs
+def gen_cpp(metamodel, model, output_path, overwrite, debug, **kwargs):
+    del metamodel, overwrite, debug, kwargs
 
     g, _, fsm_ref = get_fsm_graph(model)
 
@@ -123,8 +123,8 @@ def gen_cpp(_metamodel, model, output_path, _overwrite, _debug, **_kwargs):
     print(f"FSM C code generated at {output_path}")
 
 
-def gen_python(_metamodel, model, output_path, _overwrite, _debug, **_kwargs):
-    del _metamodel, _overwrite, _debug, _kwargs
+def gen_python(metamodel, model, output_path, overwrite, debug, **kwargs):
+    del metamodel, overwrite, debug, kwargs
 
     g, _, fsm_ref = get_fsm_graph(model)
 
