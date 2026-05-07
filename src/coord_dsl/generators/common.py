@@ -45,6 +45,7 @@ class IHasNamespaceDeclare(IHasNamespace):
 
 class NamedNamespaceObject(IHasNamespace):
     def __init__(self, parent, name, **kwargs):
+        del kwargs
         super().__init__(parent=parent)
         self.name = name
         self._uri = ""

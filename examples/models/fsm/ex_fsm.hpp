@@ -109,7 +109,7 @@ static constexpr const char * EVENT_URIS[NUM_EVENTS] = {
     "http://example.org/E-COMPILE-EXIT",
     "http://example.org/E_EXECUTE_ENTERED",
     "http://example.org/E_EXECUTE_EXIT",
-    "http://example.org/E_STEP",
+    "http://example.org/e-step",
 };
 
 // sm transitions

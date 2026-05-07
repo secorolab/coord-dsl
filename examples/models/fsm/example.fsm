@@ -17,7 +17,7 @@ EVENTS: E-CONFIGURE-ENTERED,
         E-COMPILE-EXIT,
         E_EXECUTE_ENTERED,
         E_EXECUTE_EXIT,
-        E_STEP
+        e-step
 
 TRANSITIONS:
     T_START_CONFIGURE:
@@ -68,13 +68,13 @@ REACTIONS:
         FIRES: @E_IDLE_ENTERED
 
     R_E_STEP1:
-        WHEN: @E_STEP
+        WHEN: @e-step
         DO: @T_START_CONFIGURE
-        FIRES: @E-CONFIGURE-ENTERED,@E_STEP
+        FIRES: @E-CONFIGURE-ENTERED,@e-step
     R_E_STEP2:
-        WHEN: @E_STEP
+        WHEN: @e-step
         DO: @T_IDLE_IDLE
     R_E_STEP3:
-        WHEN: @E_STEP
+        WHEN: @e-step
         DO: @T_EXECUTE_EXECUTE
 }

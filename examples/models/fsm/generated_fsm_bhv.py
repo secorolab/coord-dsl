@@ -21,6 +21,7 @@ LOOP_DURATION = 0.01
 
 
 def signal_handler(sig, frame):
+    del sig, frame
     print("You pressed Ctrl+C, exiting!")
     sys.exit(0)
 
@@ -38,6 +39,7 @@ class UserData:
 
 
 def generic_on_end(fsm: FSMData, ud: UserData, end_events: list[EventID]):
+    del ud
     # print(f"State '{StateID(fsm.current_state_index).name}' finished")
     for evt in end_events:
         produce_event(fsm.event_data, evt)
@@ -71,6 +73,7 @@ def generic_step(fsm: FSMData, ud: UserData, start_event: EventID) -> bool:
 
 def fsm_behavior(fsm: FSMData, ud: UserData, bhv_data: dict):
     cs = fsm.current_state_index
+    assert cs is not None, "current state index is None"
     # print(f"Current state: '{StateID(fsm.current_state_index).name}'")
     if cs not in bhv_data:
         return
