@@ -2,7 +2,7 @@ from jinja2 import Environment, FileSystemLoader
 from os.path import basename
 from pathlib import Path
 from rdflib import Graph, Namespace, Literal, RDF, URIRef
-from rdf_utils.uri import URL_SECORO_MM
+from rdf_utils.namespace import URL_SECORO_MM
 from rdf_utils.naming import get_valid_var_name
 from coord_dsl.generators.classes import FSM
 
