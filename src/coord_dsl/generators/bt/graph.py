@@ -36,7 +36,8 @@ from coord_dsl.generators.bt.classes import (
 from coord_dsl.generators.fsm.graph import get_fsm_graph
 from coord_dsl.generators.fsm.registration import fsm_metamodel
 
-URI_MM_BT = f"{URL_SECORO_MM}/coordination/behaviour-tree#"
+URI_MM_BT = f"{URL_SECORO_MM}/behaviour/behaviour-tree#"
+URI_MM_DATAFLOW = f"{URL_SECORO_MM}/behaviour/dataflow#"
 URI_MM_EL = f"{URL_SECORO_MM}/behaviour/event_loop#"
 
 URI_QUDT_QK_TIME = NS_MM_QUDT_QTY["Time"]
@@ -76,14 +77,21 @@ COMPOSITE_CLASS = {
     "switch": "Switch",
 }
 
+PARAMETER_DIRECTION = {
+    "in": "Input",
+    "out": "Output",
+    "inout": "InputOutput",
+}
+
 
 def _event(e):
     return f"{e.ns.name}:{e.event}" if e.ns is not None else e.standalone
 
 
 def get_bt_graph(model) -> tuple[Graph, dict, URIRef]:
-    """Build an RDF graph for a model that declares exactly one entry tree."""
+    """Build a tree graph with dataflow bindings kept outside its control structure."""
     NS_BT = Namespace(URI_MM_BT)
+    NS_DF = Namespace(URI_MM_DATAFLOW)
     NS_EL = Namespace(URI_MM_EL)
 
     g = Graph()
@@ -95,7 +103,9 @@ def get_bt_graph(model) -> tuple[Graph, dict, URIRef]:
         context[nsd.name] = nsd.uri
     for prefix, ns in (
         ("bt", NS_BT),
+        ("df", NS_DF),
         ("el", NS_EL),
+        ("rdf", RDF),
         ("qudt", NS_MM_QUDT),
         ("quantitykind", NS_MM_QUDT_QTY),
         ("unit", NS_MM_QUDT_UNIT),
@@ -128,14 +138,14 @@ def get_bt_graph(model) -> tuple[Graph, dict, URIRef]:
         g.add((instance_uri, NS_BT["instance-name"], Literal(fsm.name)))
         g.add((instance_uri, NS_BT["of-fsm"], fsm_ref))
 
-    def add_port_decl(owner, pd):
-        pn = URIRef(f"{owner}-port-{pd.name}")
-        g.add((owner, NS_BT["has-port"], pn))
-        g.add((pn, RDF.type, NS_BT.PortDeclaration))
-        g.add((pn, NS_BT["port-name"], Literal(pd.name)))
-        g.add((pn, NS_BT["port-direction"], Literal(pd.direction)))
+    def add_parameter(owner, pd):
+        pn = URIRef(f"{owner}-parameter-{pd.name}")
+        g.add((owner, NS_DF["has-parameter"], pn))
+        g.add((pn, RDF.type, NS_DF.Parameter))
+        g.add((pn, NS_DF.name, Literal(pd.name)))
+        g.add((pn, NS_DF.direction, NS_DF[PARAMETER_DIRECTION[pd.direction]]))
         if pd.type:
-            g.add((pn, NS_BT["port-type"], Literal(pd.type)))
+            g.add((pn, NS_DF["value-type"], Literal(pd.type)))
 
     beh_uri = {}
     for b in model.behaviours:
@@ -148,21 +158,25 @@ def get_bt_graph(model) -> tuple[Graph, dict, URIRef]:
             if pd.name in declared_port_names:
                 raise ValueError(f"Duplicate port declaration {pd.name!r} on {uri}")
             declared_port_names.add(pd.name)
-            add_port_decl(uri, pd)
+            add_parameter(uri, pd)
 
     tree_uri = {tree: URIRef(f"{tree.ns.uri}{tree.name}") for tree in trees}
 
     def add_bindings(node_uri, node):
-        port_names = set()
+        parameter_names = set()
         for p in getattr(node, "ports", []) or []:
-            if p.name in port_names:
+            if p.name in parameter_names:
                 raise ValueError(f"Duplicate port binding {p.name!r} on {node_uri}")
-            port_names.add(p.name)
-            pn = URIRef(f"{node_uri}-port-{p.name}")
-            g.add((node_uri, NS_BT["port"], pn))
-            g.add((pn, NS_BT["port-name"], Literal(p.name)))
+            parameter_names.add(p.name)
+            pn = URIRef(f"{node_uri}-argument-{p.name}")
+            g.add((node_uri, NS_DF["has-argument"], pn))
+            g.add((pn, RDF.type, NS_DF.Argument))
+            g.add((pn, NS_DF.name, Literal(p.name)))
             if p.blackboard:
-                g.add((pn, NS_BT["blackboard-key"], Literal(p.blackboard.key)))
+                ref = URIRef(f"{pn}-reference")
+                g.add((pn, NS_DF.references, ref))
+                g.add((ref, RDF.type, NS_DF.DataReference))
+                g.add((ref, NS_DF.name, Literal(p.blackboard.key)))
             elif p.quantity is not None:
                 unit_uri, qk_uri = UNIT_MAP[p.quantity.unit]
                 g.add((pn, RDF.type, URI_QUDT_TYPE_QUANTITY))
@@ -170,7 +184,7 @@ def get_bt_graph(model) -> tuple[Graph, dict, URIRef]:
                 g.add((pn, URI_QUDT_PRED_UNIT, unit_uri))
                 g.add((pn, URI_QUDT_PRED_QUANTITY_KIND, qk_uri))
             else:
-                g.add((pn, NS_BT["port-value"], Literal(p.value)))
+                g.add((pn, RDF.value, Literal(p.value)))
         guards = getattr(node, "guards", None)
         if guards:
             guard_kinds = set()
@@ -264,7 +278,7 @@ def get_bt_graph(model) -> tuple[Graph, dict, URIRef]:
             if pd.name in declared_port_names:
                 raise ValueError(f"Duplicate port declaration {pd.name!r} on {tu}")
             declared_port_names.add(pd.name)
-            add_port_decl(tu, pd)
+            add_parameter(tu, pd)
         ru = URIRef(f"{tu}-root")
         g.add((tu, NS_BT.root, ru))
         visit(t.root, ru)

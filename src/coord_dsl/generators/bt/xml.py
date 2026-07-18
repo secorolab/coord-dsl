@@ -12,9 +12,10 @@ from rdflib.namespace import split_uri
 from rdf_utils.namespace import NS_MM_QUDT_UNIT
 from rdf_utils.models.vocab import URI_QUDT_PRED_UNIT, URI_QUDT_PRED_VALUE
 
-from coord_dsl.generators.bt.graph import URI_MM_BT
+from coord_dsl.generators.bt.graph import URI_MM_BT, URI_MM_DATAFLOW
 
 NS_BT = Namespace(URI_MM_BT)
+NS_DF = Namespace(URI_MM_DATAFLOW)
 
 # BT.CPP built-in ports carry a fixed unit in the number (no unit attached); a
 # quantity authored in any other unit of the same kind is converted to this one.
@@ -91,6 +92,7 @@ GUARD_ATTR = {
 }
 
 PORT_TAG = {"in": "input_port", "out": "output_port", "inout": "inout_port"}
+PARAMETER_DIRECTION = {NS_DF.Input: "in", NS_DF.Output: "out", NS_DF.InputOutput: "inout"}
 
 
 def _pascal(kebab):
@@ -117,17 +119,17 @@ def _scalar(value):
 
 
 def _add_bindings(g, node, el):
-    for pn in g.objects(node, NS_BT.port):
-        name = g.value(pn, NS_BT["port-name"]).toPython()
-        bb = g.value(pn, NS_BT["blackboard-key"])
+    for pn in g.objects(node, NS_DF["has-argument"]):
+        name = g.value(pn, NS_DF.name).toPython()
+        reference = g.value(pn, NS_DF.references)
         qty = g.value(pn, URI_QUDT_PRED_VALUE)
-        if bb is not None:
-            el.set(name, "{" + bb.toPython() + "}")
+        if reference is not None:
+            el.set(name, "{" + g.value(reference, NS_DF.name).toPython() + "}")
         elif qty is not None:
             value = _convert(qty.toPython(), g.value(pn, URI_QUDT_PRED_UNIT), EXPECTED_UNIT.get((el.tag, name)))
             el.set(name, _fmt_num(value))
         else:
-            el.set(name, _scalar(g.value(pn, NS_BT["port-value"])))
+            el.set(name, _scalar(g.value(pn, RDF.value)))
 
 
 def _add_common(g, node, el):
@@ -187,8 +189,8 @@ def _render(g, node):
         if kind == "switch":
             ncases = sum(
                 1
-                for pn in g.objects(node, NS_BT.port)
-                if str(g.value(pn, NS_BT["port-name"])).startswith("case_")
+                for pn in g.objects(node, NS_DF["has-argument"])
+                if str(g.value(pn, NS_DF.name)).startswith("case_")
             )
             tag = f"Switch{ncases}"
         else:
@@ -212,11 +214,11 @@ def evented_behaviours(g):
 
 def _port_decls(g, owner, el):
     decls = []
-    for pn in g.objects(owner, NS_BT["has-port"]):
+    for pn in g.objects(owner, NS_DF["has-parameter"]):
         decls.append(
-            (str(g.value(pn, NS_BT["port-name"])),
-             str(g.value(pn, NS_BT["port-direction"])),
-             g.value(pn, NS_BT["port-type"]))
+            (str(g.value(pn, NS_DF.name)),
+             PARAMETER_DIRECTION[g.value(pn, NS_DF.direction)],
+             g.value(pn, NS_DF["value-type"]))
         )
     for name, direction, ptype in sorted(decls):
         attrs = {"name": name}

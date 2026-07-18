@@ -7,10 +7,10 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from rdflib import Namespace, RDF, URIRef
+from rdflib import Literal, Namespace, RDF, URIRef
 from textx.exceptions import TextXSyntaxError
 
-from coord_dsl.generators.bt.graph import URI_MM_BT, get_bt_graph
+from coord_dsl.generators.bt.graph import URI_MM_BT, URI_MM_DATAFLOW, get_bt_graph
 from coord_dsl.generators.bt.registration import (
     bt_metamodel,
     gen_bt_cpp_file,
@@ -20,6 +20,7 @@ from coord_dsl.generators.bt.registration import (
 
 
 NS_BT = Namespace(URI_MM_BT)
+NS_DF = Namespace(URI_MM_DATAFLOW)
 
 
 def _repo_root() -> Path:
@@ -270,3 +271,39 @@ class BtGraphTest(unittest.TestCase):
         for label, source in sources:
             with self.subTest(label=label), self.assertRaisesRegex(ValueError, "Duplicate"):
                 get_bt_graph(parse(source))
+
+    def test_dataflow_bindings_are_not_tree_concepts(self):
+        model = parse(
+            'ns n = "https://example.test/"\n'
+            'node action ping { in message: string }\n'
+            'main btree (ns=n) root { sequence { ping(message: "fixed") ping(message: {shared}) } }'
+        )
+
+        graph, _, _ = get_bt_graph(model)
+        behaviour = Namespace("https://example.test/")["behaviour-ping"]
+        parameter = graph.value(behaviour, NS_DF["has-parameter"])
+        arguments = set(graph.objects(None, NS_DF["has-argument"]))
+
+        self.assertIn((parameter, RDF.type, NS_DF.Parameter), graph)
+        self.assertEqual(graph.value(parameter, NS_DF.name), Literal("message"))
+        self.assertEqual(graph.value(parameter, NS_DF.direction), NS_DF.Input)
+        self.assertEqual({graph.value(argument, RDF.value) for argument in arguments}, {Literal("fixed"), None})
+        reference = next(
+            graph.value(argument, NS_DF.references)
+            for argument in arguments
+            if graph.value(argument, NS_DF.references)
+        )
+        self.assertEqual(graph.value(reference, RDF.type), NS_DF.DataReference)
+        self.assertEqual(graph.value(reference, NS_DF.name), Literal("shared"))
+        self.assertFalse(
+            {
+                NS_BT["has-port"],
+                NS_BT["port"],
+                NS_BT["port-name"],
+                NS_BT["port-direction"],
+                NS_BT["port-type"],
+                NS_BT["port-value"],
+                NS_BT["blackboard-key"],
+            }
+            & set(graph.predicates())
+        )

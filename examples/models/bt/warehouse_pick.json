@@ -1,12 +1,14 @@
 {
   "@context": {
-    "bt": "https://secorolab.github.io/metamodels/coordination/behaviour-tree#",
+    "bt": "https://secorolab.github.io/metamodels/behaviour/behaviour-tree#",
     "btwp": "https://secorolab.github.io/models/coordination/bt/warehouse-pick/",
     "el": "https://secorolab.github.io/metamodels/behaviour/event_loop#",
     "ev": "https://secorolab.github.io/models/coordination/warehouse-events/",
     "quantitykind": "http://qudt.org/vocab/quantitykind/",
     "qudt": "http://qudt.org/schema/qudt/",
-    "unit": "http://qudt.org/vocab/unit/"
+    "unit": "http://qudt.org/vocab/unit/",
+    "df": "https://secorolab.github.io/metamodels/behaviour/dataflow#",
+    "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
   },
   "@graph": [
     {
@@ -37,16 +39,19 @@
       "bt:node-kind": "reactive-fallback"
     },
     {
-      "@id": "btwp:warehouse_pick-root-10-0-0-port-tolerance",
-      "@type": "qudt:Quantity",
-      "bt:port-name": "tolerance",
+      "@id": "btwp:warehouse_pick-root-10-0-0-argument-tolerance",
+      "@type": [
+        "df:Argument",
+        "qudt:Quantity"
+      ],
       "qudt:hasQuantityKind": {
         "@id": "quantitykind:Length"
       },
       "qudt:unit": {
         "@id": "unit:M"
       },
-      "qudt:value": 0.1
+      "qudt:value": 0.1,
+      "df:name": "tolerance"
     },
     {
       "@id": "btwp:warehouse_pick-root-5-0",
@@ -58,19 +63,22 @@
       "bt:of-tree": {
         "@id": "btwp:grasp"
       },
-      "bt:port": [
+      "df:has-argument": [
         {
-          "@id": "btwp:warehouse_pick-root-5-0-port-object"
+          "@id": "btwp:warehouse_pick-root-5-0-argument-object"
         },
         {
-          "@id": "btwp:warehouse_pick-root-5-0-port-width"
+          "@id": "btwp:warehouse_pick-root-5-0-argument-width"
         }
       ]
     },
     {
-      "@id": "btwp:grasp-root-1-0-port-width",
-      "bt:blackboard-key": "width",
-      "bt:port-name": "width"
+      "@id": "btwp:grasp-root-1-0-argument-width",
+      "@type": "df:Argument",
+      "df:name": "width",
+      "df:references": {
+        "@id": "btwp:grasp-root-1-0-argument-width-reference"
+      }
     },
     {
       "@id": "btwp:warehouse_pick-root-2-0",
@@ -79,16 +87,18 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-script"
       },
-      "bt:port": {
-        "@id": "btwp:warehouse_pick-root-2-0-port-code"
+      "df:has-argument": {
+        "@id": "btwp:warehouse_pick-root-2-0-argument-code"
       }
     },
     {
-      "@id": "btwp:behaviour-inspect-port-result",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "out",
-      "bt:port-name": "result",
-      "bt:port-type": "string"
+      "@id": "btwp:behaviour-inspect-parameter-result",
+      "@type": "df:Parameter",
+      "df:name": "result",
+      "df:direction": {
+        "@id": "df:Output"
+      },
+      "df:value-type": "string"
     },
     {
       "@id": "btwp:warehouse_pick-root-7-0-0",
@@ -97,20 +107,22 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-place"
       },
-      "bt:port": [
+      "df:has-argument": [
         {
-          "@id": "btwp:warehouse_pick-root-7-0-0-port-object"
+          "@id": "btwp:warehouse_pick-root-7-0-0-argument-object"
         },
         {
-          "@id": "btwp:warehouse_pick-root-7-0-0-port-surface"
+          "@id": "btwp:warehouse_pick-root-7-0-0-argument-surface"
         }
       ]
     },
     {
-      "@id": "btwp:behaviour-set_blackboard-port-output_key",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "inout",
-      "bt:port-name": "output_key"
+      "@id": "btwp:behaviour-set_blackboard-parameter-output_key",
+      "@type": "df:Parameter",
+      "df:name": "output_key",
+      "df:direction": {
+        "@id": "df:InputOutput"
+      }
     },
     {
       "@id": "btwp:warehouse_pick-root-8-1",
@@ -119,8 +131,8 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-script"
       },
-      "bt:port": {
-        "@id": "btwp:warehouse_pick-root-8-1-port-code"
+      "df:has-argument": {
+        "@id": "btwp:warehouse_pick-root-8-1-argument-code"
       }
     },
     {
@@ -131,12 +143,12 @@
       "bt:of-tree": {
         "@id": "btwp:perceive"
       },
-      "bt:port": [
+      "df:has-argument": [
         {
-          "@id": "btwp:warehouse_pick-root-3-port-target"
+          "@id": "btwp:warehouse_pick-root-3-argument-target"
         },
         {
-          "@id": "btwp:warehouse_pick-root-3-port-pose"
+          "@id": "btwp:warehouse_pick-root-3-argument-pose"
         }
       ]
     },
@@ -155,24 +167,24 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-close_gripper"
       },
-      "bt:port": {
-        "@id": "btwp:grasp-root-1-0-port-width"
+      "df:has-argument": {
+        "@id": "btwp:grasp-root-1-0-argument-width"
       }
     },
     {
       "@id": "btwp:behaviour-sleep",
       "@type": "bt:Action",
       "bt:behaviour-name": "sleep",
-      "bt:has-port": {
-        "@id": "btwp:behaviour-sleep-port-msec"
+      "df:has-parameter": {
+        "@id": "btwp:behaviour-sleep-parameter-msec"
       }
     },
     {
       "@id": "btwp:behaviour-battery_ok",
       "@type": "bt:Condition",
       "bt:behaviour-name": "battery_ok",
-      "bt:has-port": {
-        "@id": "btwp:behaviour-battery_ok-port-min_level"
+      "df:has-parameter": {
+        "@id": "btwp:behaviour-battery_ok-parameter-min_level"
       }
     },
     {
@@ -192,9 +204,12 @@
       "bt:node-kind": "sequence"
     },
     {
-      "@id": "btwp:warehouse_pick-root-5-0-port-width",
-      "bt:blackboard-key": "gripper_width",
-      "bt:port-name": "width"
+      "@id": "btwp:warehouse_pick-root-5-0-argument-width",
+      "@type": "df:Argument",
+      "df:name": "width",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-5-0-argument-width-reference"
+      }
     },
     {
       "@id": "btwp:navigate-root-0",
@@ -220,12 +235,12 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-place"
       },
-      "bt:port": [
+      "df:has-argument": [
         {
-          "@id": "btwp:warehouse_pick-root-7-1-port-object"
+          "@id": "btwp:warehouse_pick-root-7-1-argument-object"
         },
         {
-          "@id": "btwp:warehouse_pick-root-7-1-port-surface"
+          "@id": "btwp:warehouse_pick-root-7-1-argument-surface"
         }
       ]
     },
@@ -233,17 +248,17 @@
       "@id": "btwp:perceive",
       "@type": "bt:BehaviourTree",
       "bt:behaviour-tree-name": "perceive",
-      "bt:has-port": [
-        {
-          "@id": "btwp:perceive-port-target"
-        },
-        {
-          "@id": "btwp:perceive-port-pose"
-        }
-      ],
       "bt:root": {
         "@id": "btwp:perceive-root"
-      }
+      },
+      "df:has-parameter": [
+        {
+          "@id": "btwp:perceive-parameter-target"
+        },
+        {
+          "@id": "btwp:perceive-parameter-pose"
+        }
+      ]
     },
     {
       "@id": "btwp:warehouse_pick-root-10-0",
@@ -265,11 +280,13 @@
       "bt:guard-script": "cycles := cycles + 1"
     },
     {
-      "@id": "btwp:behaviour-move_to-port-frame",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "frame",
-      "bt:port-type": "string"
+      "@id": "btwp:behaviour-move_to-parameter-frame",
+      "@type": "df:Parameter",
+      "df:name": "frame",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "string"
     },
     {
       "@id": "btwp:grasp-root-1-1-0",
@@ -278,21 +295,23 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-inspect"
       },
-      "bt:port": [
+      "df:has-argument": [
         {
-          "@id": "btwp:grasp-root-1-1-0-port-object"
+          "@id": "btwp:grasp-root-1-1-0-argument-object"
         },
         {
-          "@id": "btwp:grasp-root-1-1-0-port-result"
+          "@id": "btwp:grasp-root-1-1-0-argument-result"
         }
       ]
     },
     {
-      "@id": "btwp:behaviour-inspect-port-object",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "object",
-      "bt:port-type": "string"
+      "@id": "btwp:behaviour-inspect-parameter-object",
+      "@type": "df:Parameter",
+      "df:name": "object",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "string"
     },
     {
       "@id": "btwp:behaviour-always_success",
@@ -300,21 +319,27 @@
       "bt:behaviour-name": "always_success"
     },
     {
-      "@id": "btwp:warehouse_pick-root-10-0-1-0-port-msec",
-      "@type": "qudt:Quantity",
-      "bt:port-name": "msec",
+      "@id": "btwp:warehouse_pick-root-10-0-1-0-argument-msec",
+      "@type": [
+        "df:Argument",
+        "qudt:Quantity"
+      ],
       "qudt:hasQuantityKind": {
         "@id": "quantitykind:Time"
       },
       "qudt:unit": {
         "@id": "unit:MilliSEC"
       },
-      "qudt:value": 100.0
+      "qudt:value": 100.0,
+      "df:name": "msec"
     },
     {
-      "@id": "btwp:warehouse_pick-root-6-1-port-estop",
-      "bt:blackboard-key": "estop",
-      "bt:port-name": "estop"
+      "@id": "btwp:warehouse_pick-root-6-1-argument-estop",
+      "@type": "df:Argument",
+      "df:name": "estop",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-6-1-argument-estop-reference"
+      }
     },
     {
       "@id": "btwp:warehouse_pick-root-10-0-1-0",
@@ -323,24 +348,31 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-sleep"
       },
-      "bt:port": {
-        "@id": "btwp:warehouse_pick-root-10-0-1-0-port-msec"
+      "df:has-argument": {
+        "@id": "btwp:warehouse_pick-root-10-0-1-0-argument-msec"
       }
     },
     {
-      "@id": "btwp:warehouse_pick-root-11-0-port-goal",
-      "bt:blackboard-key": "wp",
-      "bt:port-name": "goal"
+      "@id": "btwp:warehouse_pick-root-11-0-argument-goal",
+      "@type": "df:Argument",
+      "df:name": "goal",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-11-0-argument-goal-reference"
+      }
     },
     {
-      "@id": "btwp:warehouse_pick-root-9-0-port-object",
-      "bt:blackboard-key": "target_object",
-      "bt:port-name": "object"
+      "@id": "btwp:warehouse_pick-root-9-0-argument-object",
+      "@type": "df:Argument",
+      "df:name": "object",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-9-0-argument-object-reference"
+      }
     },
     {
-      "@id": "btwp:navigate-root-0-2-0-0-port-frame",
-      "bt:port-name": "frame",
-      "bt:port-value": "map"
+      "@id": "btwp:navigate-root-0-2-0-0-argument-frame",
+      "@type": "df:Argument",
+      "df:name": "frame",
+      "rdf:value": "map"
     },
     {
       "@id": "btwp:warehouse_pick-root-10-0-0-guard-success-if",
@@ -362,102 +394,121 @@
       "bt:guard-script": "aborted == true"
     },
     {
-      "@id": "btwp:grasp-port-object",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "object",
-      "bt:port-type": "string"
+      "@id": "btwp:grasp-parameter-object",
+      "@type": "df:Parameter",
+      "df:name": "object",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "string"
     },
     {
-      "@id": "btwp:warehouse_pick-root-0-port-output_key",
-      "bt:port-name": "output_key",
-      "bt:port-value": "retries"
+      "@id": "btwp:warehouse_pick-root-0-argument-output_key",
+      "@type": "df:Argument",
+      "df:name": "output_key",
+      "rdf:value": "retries"
     },
     {
       "@id": "btwp:behaviour-set_blackboard",
       "@type": "bt:Action",
       "bt:behaviour-name": "set_blackboard",
-      "bt:has-port": [
+      "df:has-parameter": [
         {
-          "@id": "btwp:behaviour-set_blackboard-port-value"
+          "@id": "btwp:behaviour-set_blackboard-parameter-value"
         },
         {
-          "@id": "btwp:behaviour-set_blackboard-port-output_key"
+          "@id": "btwp:behaviour-set_blackboard-parameter-output_key"
         }
       ]
     },
     {
-      "@id": "btwp:behaviour-object_visible-port-target",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "target",
-      "bt:port-type": "string"
+      "@id": "btwp:behaviour-object_visible-parameter-target",
+      "@type": "df:Parameter",
+      "df:name": "target",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "string"
     },
     {
-      "@id": "btwp:behaviour-detect_object-port-pose",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "out",
-      "bt:port-name": "pose",
-      "bt:port-type": "pose"
+      "@id": "btwp:behaviour-detect_object-parameter-pose",
+      "@type": "df:Parameter",
+      "df:name": "pose",
+      "df:direction": {
+        "@id": "df:Output"
+      },
+      "df:value-type": "pose"
     },
     {
       "@id": "btwp:behaviour-go_charge",
       "@type": "bt:Action",
       "bt:behaviour-name": "go_charge",
-      "bt:has-port": {
-        "@id": "btwp:behaviour-go_charge-port-dock"
+      "df:has-parameter": {
+        "@id": "btwp:behaviour-go_charge-parameter-dock"
       }
     },
     {
-      "@id": "btwp:behaviour-place-port-object",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "object",
-      "bt:port-type": "string"
+      "@id": "btwp:behaviour-place-parameter-object",
+      "@type": "df:Parameter",
+      "df:name": "object",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "string"
     },
     {
-      "@id": "btwp:behaviour-script-port-code",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "code",
-      "bt:port-type": "string"
+      "@id": "btwp:behaviour-script-parameter-code",
+      "@type": "df:Parameter",
+      "df:name": "code",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "string"
     },
     {
-      "@id": "btwp:grasp-root-1-1-0-port-result",
-      "bt:blackboard-key": "grip_status",
-      "bt:port-name": "result"
+      "@id": "btwp:grasp-root-1-1-0-argument-result",
+      "@type": "df:Argument",
+      "df:name": "result",
+      "df:references": {
+        "@id": "btwp:grasp-root-1-1-0-argument-result-reference"
+      }
     },
     {
       "@id": "btwp:warehouse_pick",
       "@type": "bt:BehaviourTree",
       "bt:behaviour-tree-name": "warehouse_pick",
-      "bt:has-port": [
-        {
-          "@id": "btwp:warehouse_pick-port-target_object"
-        },
-        {
-          "@id": "btwp:warehouse_pick-port-place_pose"
-        },
-        {
-          "@id": "btwp:warehouse_pick-port-mission_status"
-        }
-      ],
       "bt:is-main": true,
       "bt:root": {
         "@id": "btwp:warehouse_pick-root"
+      },
+      "df:has-parameter": [
+        {
+          "@id": "btwp:warehouse_pick-parameter-target_object"
+        },
+        {
+          "@id": "btwp:warehouse_pick-parameter-place_pose"
+        },
+        {
+          "@id": "btwp:warehouse_pick-parameter-mission_status"
+        }
+      ]
+    },
+    {
+      "@id": "btwp:perceive-parameter-pose",
+      "@type": "df:Parameter",
+      "df:name": "pose",
+      "df:direction": {
+        "@id": "df:Output"
+      },
+      "df:value-type": "pose"
+    },
+    {
+      "@id": "btwp:perceive-root-1-1-argument-target",
+      "@type": "df:Argument",
+      "df:name": "target",
+      "df:references": {
+        "@id": "btwp:perceive-root-1-1-argument-target-reference"
       }
-    },
-    {
-      "@id": "btwp:perceive-port-pose",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "out",
-      "bt:port-name": "pose",
-      "bt:port-type": "pose"
-    },
-    {
-      "@id": "btwp:perceive-root-1-1-port-target",
-      "bt:blackboard-key": "target",
-      "bt:port-name": "target"
     },
     {
       "@id": "btwp:warehouse_pick-root-9-1",
@@ -467,79 +518,102 @@
       "bt:has-child": {
         "@id": "btwp:warehouse_pick-root-9-1-0"
       },
-      "bt:port": {
-        "@id": "btwp:warehouse_pick-root-9-1-port-delay_msec"
+      "df:has-argument": {
+        "@id": "btwp:warehouse_pick-root-9-1-argument-delay_msec"
       }
     },
     {
-      "@id": "btwp:warehouse_pick-root-7-2-port-object",
-      "bt:blackboard-key": "target_object",
-      "bt:port-name": "object"
+      "@id": "btwp:warehouse_pick-root-7-2-argument-object",
+      "@type": "df:Argument",
+      "df:name": "object",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-7-2-argument-object-reference"
+      }
     },
     {
-      "@id": "btwp:navigate-root-0-2-0-port-msec",
-      "@type": "qudt:Quantity",
-      "bt:port-name": "msec",
+      "@id": "btwp:navigate-root-0-2-0-argument-msec",
+      "@type": [
+        "df:Argument",
+        "qudt:Quantity"
+      ],
       "qudt:hasQuantityKind": {
         "@id": "quantitykind:Time"
       },
       "qudt:unit": {
         "@id": "unit:MilliSEC"
       },
-      "qudt:value": 5000.0
+      "qudt:value": 5000.0,
+      "df:name": "msec"
     },
     {
-      "@id": "btwp:warehouse_pick-root-5-port-else",
-      "bt:port-name": "else",
-      "bt:port-value": "FAILURE"
+      "@id": "btwp:warehouse_pick-root-5-argument-else",
+      "@type": "df:Argument",
+      "df:name": "else",
+      "rdf:value": "FAILURE"
     },
     {
-      "@id": "btwp:warehouse_pick-port-target_object",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "target_object",
-      "bt:port-type": "string"
+      "@id": "btwp:warehouse_pick-parameter-target_object",
+      "@type": "df:Parameter",
+      "df:name": "target_object",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "string"
     },
     {
-      "@id": "btwp:warehouse_pick-root-11-0-port-frame",
-      "bt:port-name": "frame",
-      "bt:port-value": "map"
+      "@id": "btwp:warehouse_pick-root-11-0-argument-frame",
+      "@type": "df:Argument",
+      "df:name": "frame",
+      "rdf:value": "map"
     },
     {
-      "@id": "btwp:warehouse_pick-root-6-0-port-object",
-      "bt:blackboard-key": "target_object",
-      "bt:port-name": "object"
+      "@id": "btwp:warehouse_pick-root-6-0-argument-object",
+      "@type": "df:Argument",
+      "df:name": "object",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-6-0-argument-object-reference"
+      }
     },
     {
-      "@id": "btwp:behaviour-battery_ok-port-min_level",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "min_level",
-      "bt:port-type": "double"
+      "@id": "btwp:behaviour-battery_ok-parameter-min_level",
+      "@type": "df:Parameter",
+      "df:name": "min_level",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "double"
     },
     {
-      "@id": "btwp:warehouse_pick-root-7-port-variable",
-      "bt:blackboard-key": "target_object",
-      "bt:port-name": "variable"
+      "@id": "btwp:warehouse_pick-root-7-argument-variable",
+      "@type": "df:Argument",
+      "df:name": "variable",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-7-argument-variable-reference"
+      }
     },
     {
-      "@id": "btwp:navigate-port-estop",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "estop",
-      "bt:port-type": "bool"
+      "@id": "btwp:navigate-parameter-estop",
+      "@type": "df:Parameter",
+      "df:name": "estop",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "bool"
     },
     {
-      "@id": "btwp:navigate-root-0-0-port-tolerance",
-      "@type": "qudt:Quantity",
-      "bt:port-name": "tolerance",
+      "@id": "btwp:navigate-root-0-0-argument-tolerance",
+      "@type": [
+        "df:Argument",
+        "qudt:Quantity"
+      ],
       "qudt:hasQuantityKind": {
         "@id": "quantitykind:Length"
       },
       "qudt:unit": {
         "@id": "unit:M"
       },
-      "qudt:value": 0.05
+      "qudt:value": 0.05,
+      "df:name": "tolerance"
     },
     {
       "@id": "btwp:navigate-root-0-2-0-0",
@@ -552,21 +626,21 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-move_to"
       },
-      "bt:port": [
+      "bt:start-event": "ev:move-start",
+      "df:has-argument": [
         {
-          "@id": "btwp:navigate-root-0-2-0-0-port-goal"
+          "@id": "btwp:navigate-root-0-2-0-0-argument-goal"
         },
         {
-          "@id": "btwp:navigate-root-0-2-0-0-port-frame"
+          "@id": "btwp:navigate-root-0-2-0-0-argument-frame"
         },
         {
-          "@id": "btwp:navigate-root-0-2-0-0-port-speed"
+          "@id": "btwp:navigate-root-0-2-0-0-argument-speed"
         },
         {
-          "@id": "btwp:navigate-root-0-2-0-0-port-precise"
+          "@id": "btwp:navigate-root-0-2-0-0-argument-precise"
         }
-      ],
-      "bt:start-event": "ev:move-start"
+      ]
     },
     {
       "@id": "btwp:warehouse_pick-root-1-1",
@@ -575,8 +649,8 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-go_charge"
       },
-      "bt:port": {
-        "@id": "btwp:warehouse_pick-root-1-1-port-dock"
+      "df:has-argument": {
+        "@id": "btwp:warehouse_pick-root-1-1-argument-dock"
       }
     },
     {
@@ -585,21 +659,29 @@
       "bt:behaviour-name": "open_gripper"
     },
     {
-      "@id": "btwp:warehouse_pick-root-7-1-port-surface",
-      "bt:blackboard-key": "place_pose",
-      "bt:port-name": "surface"
+      "@id": "btwp:warehouse_pick-root-7-1-argument-surface",
+      "@type": "df:Argument",
+      "df:name": "surface",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-7-1-argument-surface-reference"
+      }
     },
     {
-      "@id": "btwp:warehouse_pick-root-7-2-port-surface",
-      "bt:blackboard-key": "place_pose",
-      "bt:port-name": "surface"
+      "@id": "btwp:warehouse_pick-root-7-2-argument-surface",
+      "@type": "df:Argument",
+      "df:name": "surface",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-7-2-argument-surface-reference"
+      }
     },
     {
-      "@id": "btwp:perceive-port-target",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "target",
-      "bt:port-type": "string"
+      "@id": "btwp:perceive-parameter-target",
+      "@type": "df:Parameter",
+      "df:name": "target",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "string"
     },
     {
       "@id": "btwp:grasp-root-1-1",
@@ -617,36 +699,40 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-object_visible"
       },
-      "bt:port": {
-        "@id": "btwp:perceive-root-0-port-target"
+      "df:has-argument": {
+        "@id": "btwp:perceive-root-0-argument-target"
       }
     },
     {
-      "@id": "btwp:warehouse_pick-root-3-port-target",
-      "bt:blackboard-key": "target_object",
-      "bt:port-name": "target"
+      "@id": "btwp:warehouse_pick-root-3-argument-target",
+      "@type": "df:Argument",
+      "df:name": "target",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-3-argument-target-reference"
+      }
     },
     {
-      "@id": "btwp:warehouse_pick-root-8-1-port-code",
-      "bt:port-name": "code",
-      "bt:port-value": "mission_status := 'done'"
+      "@id": "btwp:warehouse_pick-root-8-1-argument-code",
+      "@type": "df:Argument",
+      "df:name": "code",
+      "rdf:value": "mission_status := 'done'"
     },
     {
       "@id": "btwp:behaviour-move_to",
       "@type": "bt:Action",
       "bt:behaviour-name": "move_to",
-      "bt:has-port": [
+      "df:has-parameter": [
         {
-          "@id": "btwp:behaviour-move_to-port-goal"
+          "@id": "btwp:behaviour-move_to-parameter-goal"
         },
         {
-          "@id": "btwp:behaviour-move_to-port-frame"
+          "@id": "btwp:behaviour-move_to-parameter-frame"
         },
         {
-          "@id": "btwp:behaviour-move_to-port-speed"
+          "@id": "btwp:behaviour-move_to-parameter-speed"
         },
         {
-          "@id": "btwp:behaviour-move_to-port-precise"
+          "@id": "btwp:behaviour-move_to-parameter-precise"
         }
       ]
     },
@@ -658,24 +744,28 @@
       "bt:has-child": {
         "@id": "btwp:warehouse_pick-root-5-0"
       },
-      "bt:port": [
+      "df:has-argument": [
         {
-          "@id": "btwp:warehouse_pick-root-5-port-if"
+          "@id": "btwp:warehouse_pick-root-5-argument-if"
         },
         {
-          "@id": "btwp:warehouse_pick-root-5-port-else"
+          "@id": "btwp:warehouse_pick-root-5-argument-else"
         }
       ]
     },
     {
-      "@id": "btwp:warehouse_pick-root-1-1-port-dock",
-      "bt:port-name": "dock",
-      "bt:port-value": "home_dock"
+      "@id": "btwp:warehouse_pick-root-1-1-argument-dock",
+      "@type": "df:Argument",
+      "df:name": "dock",
+      "rdf:value": "home_dock"
     },
     {
-      "@id": "btwp:grasp-root-1-1-0-port-object",
-      "bt:blackboard-key": "object",
-      "bt:port-name": "object"
+      "@id": "btwp:grasp-root-1-1-0-argument-object",
+      "@type": "df:Argument",
+      "df:name": "object",
+      "df:references": {
+        "@id": "btwp:grasp-root-1-1-0-argument-object-reference"
+      }
     },
     {
       "@id": "btwp:behaviour-always_failure",
@@ -686,14 +776,17 @@
       "@id": "btwp:behaviour-holding",
       "@type": "bt:Condition",
       "bt:behaviour-name": "holding",
-      "bt:has-port": {
-        "@id": "btwp:behaviour-holding-port-object"
+      "df:has-parameter": {
+        "@id": "btwp:behaviour-holding-parameter-object"
       }
     },
     {
-      "@id": "btwp:warehouse_pick-root-7-0-0-port-object",
-      "bt:blackboard-key": "target_object",
-      "bt:port-name": "object"
+      "@id": "btwp:warehouse_pick-root-7-0-0-argument-object",
+      "@type": "df:Argument",
+      "df:name": "object",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-7-0-0-argument-object-reference"
+      }
     },
     {
       "@id": "btwp:navigate-root-0-2-0-0-guard-failure-if",
@@ -715,28 +808,36 @@
       "bt:node-kind": "sequence"
     },
     {
-      "@id": "btwp:behaviour-at_goal-port-goal",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "goal",
-      "bt:port-type": "pose"
+      "@id": "btwp:behaviour-at_goal-parameter-goal",
+      "@type": "df:Parameter",
+      "df:name": "goal",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "pose"
     },
     {
-      "@id": "btwp:warehouse_pick-port-mission_status",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "out",
-      "bt:port-name": "mission_status",
-      "bt:port-type": "string"
+      "@id": "btwp:warehouse_pick-parameter-mission_status",
+      "@type": "df:Parameter",
+      "df:name": "mission_status",
+      "df:direction": {
+        "@id": "df:Output"
+      },
+      "df:value-type": "string"
     },
     {
-      "@id": "btwp:warehouse_pick-root-0-port-value",
-      "bt:port-name": "value",
-      "bt:port-value": "0"
+      "@id": "btwp:warehouse_pick-root-0-argument-value",
+      "@type": "df:Argument",
+      "df:name": "value",
+      "rdf:value": "0"
     },
     {
-      "@id": "btwp:warehouse_pick-root-11-port-value",
-      "bt:blackboard-key": "wp",
-      "bt:port-name": "value"
+      "@id": "btwp:warehouse_pick-root-11-argument-value",
+      "@type": "df:Argument",
+      "df:name": "value",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-11-argument-value-reference"
+      }
     },
     {
       "@id": "btwp:warehouse_pick-root-6-1",
@@ -745,12 +846,12 @@
       "bt:of-tree": {
         "@id": "btwp:navigate"
       },
-      "bt:port": [
+      "df:has-argument": [
         {
-          "@id": "btwp:warehouse_pick-root-6-1-port-goal"
+          "@id": "btwp:warehouse_pick-root-6-1-argument-goal"
         },
         {
-          "@id": "btwp:warehouse_pick-root-6-1-port-estop"
+          "@id": "btwp:warehouse_pick-root-6-1-argument-estop"
         }
       ]
     },
@@ -764,21 +865,23 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-at_goal"
       },
-      "bt:port": [
+      "df:has-argument": [
         {
-          "@id": "btwp:warehouse_pick-root-10-0-0-port-goal"
+          "@id": "btwp:warehouse_pick-root-10-0-0-argument-goal"
         },
         {
-          "@id": "btwp:warehouse_pick-root-10-0-0-port-tolerance"
+          "@id": "btwp:warehouse_pick-root-10-0-0-argument-tolerance"
         }
       ]
     },
     {
-      "@id": "btwp:behaviour-holding-port-object",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "object",
-      "bt:port-type": "string"
+      "@id": "btwp:behaviour-holding-parameter-object",
+      "@type": "df:Parameter",
+      "df:name": "object",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "string"
     },
     {
       "@id": "btwp:warehouse_pick-root-9-1-0",
@@ -809,14 +912,17 @@
       "bt:has-child": {
         "@id": "btwp:navigate-root-0-2-0-0"
       },
-      "bt:port": {
-        "@id": "btwp:navigate-root-0-2-0-port-msec"
+      "df:has-argument": {
+        "@id": "btwp:navigate-root-0-2-0-argument-msec"
       }
     },
     {
-      "@id": "btwp:warehouse_pick-root-11-port-queue",
-      "bt:blackboard-key": "waypoints",
-      "bt:port-name": "queue"
+      "@id": "btwp:warehouse_pick-root-11-argument-queue",
+      "@type": "df:Argument",
+      "df:name": "queue",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-11-argument-queue-reference"
+      }
     },
     {
       "@id": "btwp:warehouse_pick-root-8",
@@ -831,69 +937,89 @@
         }
       ],
       "bt:node-kind": "parallel-all",
-      "bt:port": {
-        "@id": "btwp:warehouse_pick-root-8-port-max_failures"
+      "df:has-argument": {
+        "@id": "btwp:warehouse_pick-root-8-argument-max_failures"
       }
     },
     {
       "@id": "btwp:behaviour-at_goal",
       "@type": "bt:Condition",
       "bt:behaviour-name": "at_goal",
-      "bt:has-port": [
+      "df:has-parameter": [
         {
-          "@id": "btwp:behaviour-at_goal-port-goal"
+          "@id": "btwp:behaviour-at_goal-parameter-goal"
         },
         {
-          "@id": "btwp:behaviour-at_goal-port-tolerance"
+          "@id": "btwp:behaviour-at_goal-parameter-tolerance"
         }
       ]
     },
     {
-      "@id": "btwp:warehouse_pick-root-4-port-estop",
-      "bt:blackboard-key": "estop",
-      "bt:port-name": "estop"
+      "@id": "btwp:warehouse_pick-root-4-argument-estop",
+      "@type": "df:Argument",
+      "df:name": "estop",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-4-argument-estop-reference"
+      }
     },
     {
-      "@id": "btwp:warehouse_pick-root-10-0-0-port-goal",
-      "bt:blackboard-key": "place_pose",
-      "bt:port-name": "goal"
+      "@id": "btwp:warehouse_pick-root-10-0-0-argument-goal",
+      "@type": "df:Argument",
+      "df:name": "goal",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-10-0-0-argument-goal-reference"
+      }
     },
     {
-      "@id": "btwp:grasp-root-2-port-object",
-      "bt:blackboard-key": "object",
-      "bt:port-name": "object"
+      "@id": "btwp:grasp-root-2-argument-object",
+      "@type": "df:Argument",
+      "df:name": "object",
+      "df:references": {
+        "@id": "btwp:grasp-root-2-argument-object-reference"
+      }
     },
     {
-      "@id": "btwp:warehouse_pick-root-4-port-goal",
-      "bt:blackboard-key": "pick_pose",
-      "bt:port-name": "goal"
+      "@id": "btwp:warehouse_pick-root-4-argument-goal",
+      "@type": "df:Argument",
+      "df:name": "goal",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-4-argument-goal-reference"
+      }
     },
     {
-      "@id": "btwp:navigate-root-0-2-port-num_attempts",
-      "bt:port-name": "num_attempts",
-      "bt:port-value": 3.0
+      "@id": "btwp:navigate-root-0-2-argument-num_attempts",
+      "@type": "df:Argument",
+      "df:name": "num_attempts",
+      "rdf:value": 3.0
     },
     {
-      "@id": "btwp:warehouse_pick-root-8-port-max_failures",
-      "bt:port-name": "max_failures",
-      "bt:port-value": 1.0
+      "@id": "btwp:warehouse_pick-root-8-argument-max_failures",
+      "@type": "df:Argument",
+      "df:name": "max_failures",
+      "rdf:value": 1.0
     },
     {
-      "@id": "btwp:navigate-root-0-2-0-0-port-speed",
-      "@type": "qudt:Quantity",
-      "bt:port-name": "speed",
+      "@id": "btwp:navigate-root-0-2-0-0-argument-speed",
+      "@type": [
+        "df:Argument",
+        "qudt:Quantity"
+      ],
       "qudt:hasQuantityKind": {
         "@id": "quantitykind:Speed"
       },
       "qudt:unit": {
         "@id": "unit:M-PER-SEC"
       },
-      "qudt:value": 0.5
+      "qudt:value": 0.5,
+      "df:name": "speed"
     },
     {
-      "@id": "btwp:perceive-root-1-1-port-pose",
-      "bt:blackboard-key": "pose",
-      "bt:port-name": "pose"
+      "@id": "btwp:perceive-root-1-1-argument-pose",
+      "@type": "df:Argument",
+      "df:name": "pose",
+      "df:references": {
+        "@id": "btwp:perceive-root-1-1-argument-pose-reference"
+      }
     },
     {
       "@id": "btwp:warehouse_pick-root-7-0",
@@ -966,29 +1092,34 @@
       "bt:has-child": {
         "@id": "btwp:warehouse_pick-root-10-0"
       },
-      "bt:port": {
-        "@id": "btwp:warehouse_pick-root-10-port-num_cycles"
+      "df:has-argument": {
+        "@id": "btwp:warehouse_pick-root-10-argument-num_cycles"
       }
     },
     {
-      "@id": "btwp:behaviour-sleep-port-msec",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "msec",
-      "bt:port-type": "double"
+      "@id": "btwp:behaviour-sleep-parameter-msec",
+      "@type": "df:Parameter",
+      "df:name": "msec",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "double"
     },
     {
       "@id": "btwp:behaviour-script",
       "@type": "bt:Action",
       "bt:behaviour-name": "script",
-      "bt:has-port": {
-        "@id": "btwp:behaviour-script-port-code"
+      "df:has-parameter": {
+        "@id": "btwp:behaviour-script-parameter-code"
       }
     },
     {
-      "@id": "btwp:warehouse_pick-root-6-1-port-goal",
-      "bt:blackboard-key": "place_pose",
-      "bt:port-name": "goal"
+      "@id": "btwp:warehouse_pick-root-6-1-argument-goal",
+      "@type": "df:Argument",
+      "df:name": "goal",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-6-1-argument-goal-reference"
+      }
     },
     {
       "@id": "btwp:warehouse_pick-root-8-0",
@@ -1008,23 +1139,26 @@
       }
     },
     {
-      "@id": "btwp:warehouse_pick-root-11-0-port-speed",
-      "@type": "qudt:Quantity",
-      "bt:port-name": "speed",
+      "@id": "btwp:warehouse_pick-root-11-0-argument-speed",
+      "@type": [
+        "df:Argument",
+        "qudt:Quantity"
+      ],
       "qudt:hasQuantityKind": {
         "@id": "quantitykind:Speed"
       },
       "qudt:unit": {
         "@id": "unit:M-PER-SEC"
       },
-      "qudt:value": 0.3
+      "qudt:value": 0.3,
+      "df:name": "speed"
     },
     {
       "@id": "btwp:behaviour-close_gripper",
       "@type": "bt:Action",
       "bt:behaviour-name": "close_gripper",
-      "bt:has-port": {
-        "@id": "btwp:behaviour-close_gripper-port-width"
+      "df:has-parameter": {
+        "@id": "btwp:behaviour-close_gripper-parameter-width"
       }
     },
     {
@@ -1034,26 +1168,29 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-at_goal"
       },
-      "bt:port": [
+      "df:has-argument": [
         {
-          "@id": "btwp:navigate-root-0-0-port-goal"
+          "@id": "btwp:navigate-root-0-0-argument-goal"
         },
         {
-          "@id": "btwp:navigate-root-0-0-port-tolerance"
+          "@id": "btwp:navigate-root-0-0-argument-tolerance"
         }
       ]
     },
     {
-      "@id": "btwp:behaviour-set_blackboard-port-value",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "value",
-      "bt:port-type": "string"
+      "@id": "btwp:behaviour-set_blackboard-parameter-value",
+      "@type": "df:Parameter",
+      "df:name": "value",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "string"
     },
     {
-      "@id": "btwp:warehouse_pick-root-10-port-num_cycles",
-      "bt:port-name": "num_cycles",
-      "bt:port-value": 2.0
+      "@id": "btwp:warehouse_pick-root-10-argument-num_cycles",
+      "@type": "df:Argument",
+      "df:name": "num_cycles",
+      "rdf:value": 2.0
     },
     {
       "@id": "btwp:navigate-root-0-2-guard-on-failure",
@@ -1064,33 +1201,40 @@
       "@id": "btwp:behaviour-detect_object",
       "@type": "bt:Action",
       "bt:behaviour-name": "detect_object",
-      "bt:has-port": [
+      "df:has-parameter": [
         {
-          "@id": "btwp:behaviour-detect_object-port-target"
+          "@id": "btwp:behaviour-detect_object-parameter-target"
         },
         {
-          "@id": "btwp:behaviour-detect_object-port-pose"
+          "@id": "btwp:behaviour-detect_object-parameter-pose"
         }
       ]
     },
     {
-      "@id": "btwp:navigate-root-0-0-port-goal",
-      "bt:blackboard-key": "goal",
-      "bt:port-name": "goal"
+      "@id": "btwp:navigate-root-0-0-argument-goal",
+      "@type": "df:Argument",
+      "df:name": "goal",
+      "df:references": {
+        "@id": "btwp:navigate-root-0-0-argument-goal-reference"
+      }
     },
     {
-      "@id": "btwp:behaviour-move_to-port-precise",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "precise",
-      "bt:port-type": "bool"
+      "@id": "btwp:behaviour-move_to-parameter-precise",
+      "@type": "df:Parameter",
+      "df:name": "precise",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "bool"
     },
     {
-      "@id": "btwp:behaviour-go_charge-port-dock",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "dock",
-      "bt:port-type": "string"
+      "@id": "btwp:behaviour-go_charge-parameter-dock",
+      "@type": "df:Parameter",
+      "df:name": "dock",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "string"
     },
     {
       "@id": "btwp:warehouse_pick-root-4",
@@ -1099,26 +1243,31 @@
       "bt:of-tree": {
         "@id": "btwp:navigate"
       },
-      "bt:port": [
+      "df:has-argument": [
         {
-          "@id": "btwp:warehouse_pick-root-4-port-goal"
+          "@id": "btwp:warehouse_pick-root-4-argument-goal"
         },
         {
-          "@id": "btwp:warehouse_pick-root-4-port-estop"
+          "@id": "btwp:warehouse_pick-root-4-argument-estop"
         }
       ]
     },
     {
-      "@id": "btwp:grasp-port-width",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "inout",
-      "bt:port-name": "width",
-      "bt:port-type": "double"
+      "@id": "btwp:grasp-parameter-width",
+      "@type": "df:Parameter",
+      "df:name": "width",
+      "df:direction": {
+        "@id": "df:InputOutput"
+      },
+      "df:value-type": "double"
     },
     {
-      "@id": "btwp:warehouse_pick-root-7-1-port-object",
-      "bt:blackboard-key": "target_object",
-      "bt:port-name": "object"
+      "@id": "btwp:warehouse_pick-root-7-1-argument-object",
+      "@type": "df:Argument",
+      "df:name": "object",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-7-1-argument-object-reference"
+      }
     },
     {
       "@id": "btwp:navigate-root-0-1",
@@ -1132,36 +1281,43 @@
       "@id": "btwp:behaviour-place",
       "@type": "bt:Action",
       "bt:behaviour-name": "place",
-      "bt:has-port": [
+      "df:has-parameter": [
         {
-          "@id": "btwp:behaviour-place-port-object"
+          "@id": "btwp:behaviour-place-parameter-object"
         },
         {
-          "@id": "btwp:behaviour-place-port-surface"
+          "@id": "btwp:behaviour-place-parameter-surface"
         }
       ]
     },
     {
-      "@id": "btwp:behaviour-detect_object-port-target",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "target",
-      "bt:port-type": "string"
+      "@id": "btwp:behaviour-detect_object-parameter-target",
+      "@type": "df:Parameter",
+      "df:name": "target",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "string"
     },
     {
-      "@id": "btwp:navigate-root-0-2-0-0-port-goal",
-      "bt:blackboard-key": "goal",
-      "bt:port-name": "goal"
+      "@id": "btwp:navigate-root-0-2-0-0-argument-goal",
+      "@type": "df:Argument",
+      "df:name": "goal",
+      "df:references": {
+        "@id": "btwp:navigate-root-0-2-0-0-argument-goal-reference"
+      }
     },
     {
-      "@id": "btwp:perceive-root-1-0-port-code",
-      "bt:port-name": "code",
-      "bt:port-value": "attempts := 1"
+      "@id": "btwp:perceive-root-1-0-argument-code",
+      "@type": "df:Argument",
+      "df:name": "code",
+      "rdf:value": "attempts := 1"
     },
     {
-      "@id": "btwp:warehouse_pick-root-11-0-port-precise",
-      "bt:port-name": "precise",
-      "bt:port-value": false
+      "@id": "btwp:warehouse_pick-root-11-0-argument-precise",
+      "@type": "df:Argument",
+      "df:name": "precise",
+      "rdf:value": false
     },
     {
       "@id": "btwp:warehouse_pick-root-guard-on-halted",
@@ -1175,8 +1331,8 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-battery_ok"
       },
-      "bt:port": {
-        "@id": "btwp:warehouse_pick-root-1-0-port-min_level"
+      "df:has-argument": {
+        "@id": "btwp:warehouse_pick-root-1-0-argument-min_level"
       }
     },
     {
@@ -1186,12 +1342,12 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-set_blackboard"
       },
-      "bt:port": [
+      "df:has-argument": [
         {
-          "@id": "btwp:warehouse_pick-root-0-port-value"
+          "@id": "btwp:warehouse_pick-root-0-argument-value"
         },
         {
-          "@id": "btwp:warehouse_pick-root-0-port-output_key"
+          "@id": "btwp:warehouse_pick-root-0-argument-output_key"
         }
       ]
     },
@@ -1202,12 +1358,12 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-detect_object"
       },
-      "bt:port": [
+      "df:has-argument": [
         {
-          "@id": "btwp:perceive-root-1-1-port-target"
+          "@id": "btwp:perceive-root-1-1-argument-target"
         },
         {
-          "@id": "btwp:perceive-root-1-1-port-pose"
+          "@id": "btwp:perceive-root-1-1-argument-pose"
         }
       ]
     },
@@ -1222,8 +1378,8 @@
       "bt:has-child": {
         "@id": "btwp:navigate-root-0-2-0"
       },
-      "bt:port": {
-        "@id": "btwp:navigate-root-0-2-port-num_attempts"
+      "df:has-argument": {
+        "@id": "btwp:navigate-root-0-2-argument-num_attempts"
       }
     },
     {
@@ -1239,12 +1395,12 @@
         }
       ],
       "bt:node-kind": "parallel",
-      "bt:port": [
+      "df:has-argument": [
         {
-          "@id": "btwp:grasp-root-1-port-success_count"
+          "@id": "btwp:grasp-root-1-argument-success_count"
         },
         {
-          "@id": "btwp:grasp-root-1-port-failure_count"
+          "@id": "btwp:grasp-root-1-argument-failure_count"
         }
       ]
     },
@@ -1281,15 +1437,15 @@
         }
       ],
       "bt:node-kind": "switch",
-      "bt:port": [
+      "df:has-argument": [
         {
-          "@id": "btwp:warehouse_pick-root-7-port-variable"
+          "@id": "btwp:warehouse_pick-root-7-argument-variable"
         },
         {
-          "@id": "btwp:warehouse_pick-root-7-port-case_1"
+          "@id": "btwp:warehouse_pick-root-7-argument-case_1"
         },
         {
-          "@id": "btwp:warehouse_pick-root-7-port-case_2"
+          "@id": "btwp:warehouse_pick-root-7-argument-case_2"
         }
       ]
     },
@@ -1308,9 +1464,10 @@
       "bt:node-kind": "fallback"
     },
     {
-      "@id": "btwp:grasp-root-1-port-failure_count",
-      "bt:port-name": "failure_count",
-      "bt:port-value": 1.0
+      "@id": "btwp:grasp-root-1-argument-failure_count",
+      "@type": "df:Argument",
+      "df:name": "failure_count",
+      "rdf:value": 1.0
     },
     {
       "@id": "btwp:warehouse_pick-root-9-2-0",
@@ -1321,23 +1478,30 @@
       }
     },
     {
-      "@id": "btwp:behaviour-at_goal-port-tolerance",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "tolerance",
-      "bt:port-type": "double"
+      "@id": "btwp:behaviour-at_goal-parameter-tolerance",
+      "@type": "df:Parameter",
+      "df:name": "tolerance",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "double"
     },
     {
-      "@id": "btwp:behaviour-move_to-port-speed",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "speed",
-      "bt:port-type": "double"
+      "@id": "btwp:behaviour-move_to-parameter-speed",
+      "@type": "df:Parameter",
+      "df:name": "speed",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "double"
     },
     {
-      "@id": "btwp:warehouse_pick-root-5-0-port-object",
-      "bt:blackboard-key": "target_object",
-      "bt:port-name": "object"
+      "@id": "btwp:warehouse_pick-root-5-0-argument-object",
+      "@type": "df:Argument",
+      "df:name": "object",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-5-0-argument-object-reference"
+      }
     },
     {
       "@id": "btwp:warehouse_pick-root-9-0",
@@ -1346,29 +1510,31 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-holding"
       },
-      "bt:port": {
-        "@id": "btwp:warehouse_pick-root-9-0-port-object"
+      "df:has-argument": {
+        "@id": "btwp:warehouse_pick-root-9-0-argument-object"
       }
     },
     {
       "@id": "btwp:behaviour-inspect",
       "@type": "bt:Action",
       "bt:behaviour-name": "inspect",
-      "bt:has-port": [
+      "df:has-parameter": [
         {
-          "@id": "btwp:behaviour-inspect-port-object"
+          "@id": "btwp:behaviour-inspect-parameter-object"
         },
         {
-          "@id": "btwp:behaviour-inspect-port-result"
+          "@id": "btwp:behaviour-inspect-parameter-result"
         }
       ]
     },
     {
-      "@id": "btwp:warehouse_pick-port-place_pose",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "place_pose",
-      "bt:port-type": "pose"
+      "@id": "btwp:warehouse_pick-parameter-place_pose",
+      "@type": "df:Parameter",
+      "df:name": "place_pose",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "pose"
     },
     {
       "@id": "btwp:warehouse_pick-root-9-2",
@@ -1383,21 +1549,26 @@
       "@id": "btwp:behaviour-object_visible",
       "@type": "bt:Condition",
       "bt:behaviour-name": "object_visible",
-      "bt:has-port": {
-        "@id": "btwp:behaviour-object_visible-port-target"
+      "df:has-parameter": {
+        "@id": "btwp:behaviour-object_visible-parameter-target"
       }
     },
     {
-      "@id": "btwp:behaviour-close_gripper-port-width",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "inout",
-      "bt:port-name": "width",
-      "bt:port-type": "double"
+      "@id": "btwp:behaviour-close_gripper-parameter-width",
+      "@type": "df:Parameter",
+      "df:name": "width",
+      "df:direction": {
+        "@id": "df:InputOutput"
+      },
+      "df:value-type": "double"
     },
     {
-      "@id": "btwp:warehouse_pick-root-7-0-0-port-surface",
-      "bt:blackboard-key": "place_pose",
-      "bt:port-name": "surface"
+      "@id": "btwp:warehouse_pick-root-7-0-0-argument-surface",
+      "@type": "df:Argument",
+      "df:name": "surface",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-7-0-0-argument-surface-reference"
+      }
     },
     {
       "@id": "btwp:warehouse_pick-root-11-0",
@@ -1406,35 +1577,38 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-move_to"
       },
-      "bt:port": [
+      "df:has-argument": [
         {
-          "@id": "btwp:warehouse_pick-root-11-0-port-goal"
+          "@id": "btwp:warehouse_pick-root-11-0-argument-goal"
         },
         {
-          "@id": "btwp:warehouse_pick-root-11-0-port-frame"
+          "@id": "btwp:warehouse_pick-root-11-0-argument-frame"
         },
         {
-          "@id": "btwp:warehouse_pick-root-11-0-port-speed"
+          "@id": "btwp:warehouse_pick-root-11-0-argument-speed"
         },
         {
-          "@id": "btwp:warehouse_pick-root-11-0-port-precise"
+          "@id": "btwp:warehouse_pick-root-11-0-argument-precise"
         }
       ]
     },
     {
-      "@id": "btwp:warehouse_pick-root-1-0-port-min_level",
-      "bt:port-name": "min_level",
-      "bt:port-value": 0.2
+      "@id": "btwp:warehouse_pick-root-1-0-argument-min_level",
+      "@type": "df:Argument",
+      "df:name": "min_level",
+      "rdf:value": 0.2
     },
     {
-      "@id": "btwp:grasp-root-1-port-success_count",
-      "bt:port-name": "success_count",
-      "bt:port-value": 1.0
+      "@id": "btwp:grasp-root-1-argument-success_count",
+      "@type": "df:Argument",
+      "df:name": "success_count",
+      "rdf:value": 1.0
     },
     {
-      "@id": "btwp:warehouse_pick-root-2-0-port-code",
-      "bt:port-name": "code",
-      "bt:port-value": "mission_status := 'started'"
+      "@id": "btwp:warehouse_pick-root-2-0-argument-code",
+      "@type": "df:Argument",
+      "df:name": "code",
+      "rdf:value": "mission_status := 'started'"
     },
     {
       "@id": "btwp:warehouse_pick-root-7-2",
@@ -1443,29 +1617,34 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-place"
       },
-      "bt:port": [
+      "df:has-argument": [
         {
-          "@id": "btwp:warehouse_pick-root-7-2-port-object"
+          "@id": "btwp:warehouse_pick-root-7-2-argument-object"
         },
         {
-          "@id": "btwp:warehouse_pick-root-7-2-port-surface"
+          "@id": "btwp:warehouse_pick-root-7-2-argument-surface"
         }
       ]
     },
     {
-      "@id": "btwp:warehouse_pick-root-7-port-case_2",
-      "bt:port-name": "case_2",
-      "bt:port-value": "heavy"
+      "@id": "btwp:warehouse_pick-root-7-argument-case_2",
+      "@type": "df:Argument",
+      "df:name": "case_2",
+      "rdf:value": "heavy"
     },
     {
-      "@id": "btwp:warehouse_pick-root-5-port-if",
-      "bt:port-name": "if",
-      "bt:port-value": "battery > 0.1"
+      "@id": "btwp:warehouse_pick-root-5-argument-if",
+      "@type": "df:Argument",
+      "df:name": "if",
+      "rdf:value": "battery > 0.1"
     },
     {
-      "@id": "btwp:perceive-root-0-port-target",
-      "bt:blackboard-key": "target",
-      "bt:port-name": "target"
+      "@id": "btwp:perceive-root-0-argument-target",
+      "@type": "df:Argument",
+      "df:name": "target",
+      "df:references": {
+        "@id": "btwp:perceive-root-0-argument-target-reference"
+      }
     },
     {
       "@id": "btwp:warehouse_pick-root-6-0",
@@ -1477,68 +1656,79 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-holding"
       },
-      "bt:port": {
-        "@id": "btwp:warehouse_pick-root-6-0-port-object"
+      "df:has-argument": {
+        "@id": "btwp:warehouse_pick-root-6-0-argument-object"
       }
     },
     {
-      "@id": "btwp:navigate-port-goal",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "goal",
-      "bt:port-type": "pose"
+      "@id": "btwp:navigate-parameter-goal",
+      "@type": "df:Parameter",
+      "df:name": "goal",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "pose"
     },
     {
-      "@id": "btwp:warehouse_pick-root-7-port-case_1",
-      "bt:port-name": "case_1",
-      "bt:port-value": "fragile"
+      "@id": "btwp:warehouse_pick-root-7-argument-case_1",
+      "@type": "df:Argument",
+      "df:name": "case_1",
+      "rdf:value": "fragile"
     },
     {
-      "@id": "btwp:navigate-root-0-2-0-0-port-precise",
-      "bt:port-name": "precise",
-      "bt:port-value": true
+      "@id": "btwp:navigate-root-0-2-0-0-argument-precise",
+      "@type": "df:Argument",
+      "df:name": "precise",
+      "rdf:value": true
     },
     {
-      "@id": "btwp:behaviour-move_to-port-goal",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "goal",
-      "bt:port-type": "pose"
+      "@id": "btwp:behaviour-move_to-parameter-goal",
+      "@type": "df:Parameter",
+      "df:name": "goal",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "pose"
     },
     {
-      "@id": "btwp:warehouse_pick-root-9-1-port-delay_msec",
-      "@type": "qudt:Quantity",
-      "bt:port-name": "delay_msec",
+      "@id": "btwp:warehouse_pick-root-9-1-argument-delay_msec",
+      "@type": [
+        "df:Argument",
+        "qudt:Quantity"
+      ],
       "qudt:hasQuantityKind": {
         "@id": "quantitykind:Time"
       },
       "qudt:unit": {
         "@id": "unit:MilliSEC"
       },
-      "qudt:value": 500.0
+      "qudt:value": 500.0,
+      "df:name": "delay_msec"
     },
     {
-      "@id": "btwp:behaviour-place-port-surface",
-      "@type": "bt:PortDeclaration",
-      "bt:port-direction": "in",
-      "bt:port-name": "surface",
-      "bt:port-type": "pose"
+      "@id": "btwp:behaviour-place-parameter-surface",
+      "@type": "df:Parameter",
+      "df:name": "surface",
+      "df:direction": {
+        "@id": "df:Input"
+      },
+      "df:value-type": "pose"
     },
     {
       "@id": "btwp:grasp",
       "@type": "bt:BehaviourTree",
       "bt:behaviour-tree-name": "grasp",
-      "bt:has-port": [
-        {
-          "@id": "btwp:grasp-port-object"
-        },
-        {
-          "@id": "btwp:grasp-port-width"
-        }
-      ],
       "bt:root": {
         "@id": "btwp:grasp-root"
-      }
+      },
+      "df:has-parameter": [
+        {
+          "@id": "btwp:grasp-parameter-object"
+        },
+        {
+          "@id": "btwp:grasp-parameter-width"
+        }
+      ]
     },
     {
       "@id": "btwp:warehouse_pick-root-11",
@@ -1548,19 +1738,22 @@
       "bt:has-child": {
         "@id": "btwp:warehouse_pick-root-11-0"
       },
-      "bt:port": [
+      "df:has-argument": [
         {
-          "@id": "btwp:warehouse_pick-root-11-port-queue"
+          "@id": "btwp:warehouse_pick-root-11-argument-queue"
         },
         {
-          "@id": "btwp:warehouse_pick-root-11-port-value"
+          "@id": "btwp:warehouse_pick-root-11-argument-value"
         }
       ]
     },
     {
-      "@id": "btwp:warehouse_pick-root-3-port-pose",
-      "bt:blackboard-key": "pick_pose",
-      "bt:port-name": "pose"
+      "@id": "btwp:warehouse_pick-root-3-argument-pose",
+      "@type": "df:Argument",
+      "df:name": "pose",
+      "df:references": {
+        "@id": "btwp:warehouse_pick-root-3-argument-pose-reference"
+      }
     },
     {
       "@id": "btwp:grasp-root-2",
@@ -1569,8 +1762,8 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-holding"
       },
-      "bt:port": {
-        "@id": "btwp:grasp-root-2-port-object"
+      "df:has-argument": {
+        "@id": "btwp:grasp-root-2-argument-object"
       }
     },
     {
@@ -1580,8 +1773,8 @@
       "bt:of-behaviour": {
         "@id": "btwp:behaviour-script"
       },
-      "bt:port": {
-        "@id": "btwp:perceive-root-1-0-port-code"
+      "df:has-argument": {
+        "@id": "btwp:perceive-root-1-0-argument-code"
       }
     },
     {
@@ -1593,17 +1786,167 @@
       "@id": "btwp:navigate",
       "@type": "bt:BehaviourTree",
       "bt:behaviour-tree-name": "navigate",
-      "bt:has-port": [
-        {
-          "@id": "btwp:navigate-port-goal"
-        },
-        {
-          "@id": "btwp:navigate-port-estop"
-        }
-      ],
       "bt:root": {
         "@id": "btwp:navigate-root"
-      }
+      },
+      "df:has-parameter": [
+        {
+          "@id": "btwp:navigate-parameter-goal"
+        },
+        {
+          "@id": "btwp:navigate-parameter-estop"
+        }
+      ]
+    },
+    {
+      "@id": "btwp:grasp-root-1-0-argument-width-reference",
+      "@type": "df:DataReference",
+      "df:name": "width"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-5-0-argument-width-reference",
+      "@type": "df:DataReference",
+      "df:name": "gripper_width"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-6-1-argument-estop-reference",
+      "@type": "df:DataReference",
+      "df:name": "estop"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-11-0-argument-goal-reference",
+      "@type": "df:DataReference",
+      "df:name": "wp"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-9-0-argument-object-reference",
+      "@type": "df:DataReference",
+      "df:name": "target_object"
+    },
+    {
+      "@id": "btwp:grasp-root-1-1-0-argument-result-reference",
+      "@type": "df:DataReference",
+      "df:name": "grip_status"
+    },
+    {
+      "@id": "btwp:perceive-root-1-1-argument-target-reference",
+      "@type": "df:DataReference",
+      "df:name": "target"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-7-2-argument-object-reference",
+      "@type": "df:DataReference",
+      "df:name": "target_object"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-6-0-argument-object-reference",
+      "@type": "df:DataReference",
+      "df:name": "target_object"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-7-argument-variable-reference",
+      "@type": "df:DataReference",
+      "df:name": "target_object"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-7-1-argument-surface-reference",
+      "@type": "df:DataReference",
+      "df:name": "place_pose"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-7-2-argument-surface-reference",
+      "@type": "df:DataReference",
+      "df:name": "place_pose"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-3-argument-target-reference",
+      "@type": "df:DataReference",
+      "df:name": "target_object"
+    },
+    {
+      "@id": "btwp:grasp-root-1-1-0-argument-object-reference",
+      "@type": "df:DataReference",
+      "df:name": "object"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-7-0-0-argument-object-reference",
+      "@type": "df:DataReference",
+      "df:name": "target_object"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-11-argument-value-reference",
+      "@type": "df:DataReference",
+      "df:name": "wp"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-11-argument-queue-reference",
+      "@type": "df:DataReference",
+      "df:name": "waypoints"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-4-argument-estop-reference",
+      "@type": "df:DataReference",
+      "df:name": "estop"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-10-0-0-argument-goal-reference",
+      "@type": "df:DataReference",
+      "df:name": "place_pose"
+    },
+    {
+      "@id": "btwp:grasp-root-2-argument-object-reference",
+      "@type": "df:DataReference",
+      "df:name": "object"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-4-argument-goal-reference",
+      "@type": "df:DataReference",
+      "df:name": "pick_pose"
+    },
+    {
+      "@id": "btwp:perceive-root-1-1-argument-pose-reference",
+      "@type": "df:DataReference",
+      "df:name": "pose"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-6-1-argument-goal-reference",
+      "@type": "df:DataReference",
+      "df:name": "place_pose"
+    },
+    {
+      "@id": "btwp:navigate-root-0-0-argument-goal-reference",
+      "@type": "df:DataReference",
+      "df:name": "goal"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-7-1-argument-object-reference",
+      "@type": "df:DataReference",
+      "df:name": "target_object"
+    },
+    {
+      "@id": "btwp:navigate-root-0-2-0-0-argument-goal-reference",
+      "@type": "df:DataReference",
+      "df:name": "goal"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-5-0-argument-object-reference",
+      "@type": "df:DataReference",
+      "df:name": "target_object"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-7-0-0-argument-surface-reference",
+      "@type": "df:DataReference",
+      "df:name": "place_pose"
+    },
+    {
+      "@id": "btwp:perceive-root-0-argument-target-reference",
+      "@type": "df:DataReference",
+      "df:name": "target"
+    },
+    {
+      "@id": "btwp:warehouse_pick-root-3-argument-pose-reference",
+      "@type": "df:DataReference",
+      "df:name": "pick_pose"
     }
   ]
 }

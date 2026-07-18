@@ -20,10 +20,11 @@ from rdflib.namespace import split_uri
 from rdf_utils.models.vocab import URI_QUDT_PRED_UNIT, URI_QUDT_PRED_VALUE
 from rdf_utils.naming import get_valid_var_name
 
-from coord_dsl.generators.bt.graph import URI_MM_BT
+from coord_dsl.generators.bt.graph import URI_MM_BT, URI_MM_DATAFLOW
 from coord_dsl.generators.bt.xml import BUILTIN_TAG, UNIT_SI
 
 NS_BT = Namespace(URI_MM_BT)
+NS_DF = Namespace(URI_MM_DATAFLOW)
 
 # composite kind -> (py_trees class, extra constructor kwargs as source text)
 _SEQUENCE = {"sequence": "memory=True", "sequence-with-memory": "memory=True",
@@ -116,13 +117,13 @@ def _scalar(lit):
 
 def _port(g, node, name):
     """Return a port's static value (scalar or seconds for a time quantity)."""
-    for pn in g.objects(node, NS_BT.port):
-        if str(g.value(pn, NS_BT["port-name"])) != name:
+    for pn in g.objects(node, NS_DF["has-argument"]):
+        if str(g.value(pn, NS_DF.name)) != name:
             continue
         qty = g.value(pn, URI_QUDT_PRED_VALUE)
         if qty is not None:
             return qty.toPython() * UNIT_SI[g.value(pn, URI_QUDT_PRED_UNIT)]
-        val = g.value(pn, NS_BT["port-value"])
+        val = g.value(pn, RDF.value)
         return _scalar(val) if val is not None else None
     return None
 
@@ -203,8 +204,8 @@ def _render_node(g, node):
             return f"{_BUILTIN_LEAF[bname]}(name={name!r})"
         if bname in BUILTIN_TAG:
             raise NotImplementedError(f"builtin leaf {bname!r} is not supported by the py_trees target")
-        ports = {str(g.value(pn, NS_BT["port-name"])): _port(g, node, str(g.value(pn, NS_BT["port-name"])))
-                 for pn in g.objects(node, NS_BT.port)}
+        ports = {str(g.value(pn, NS_DF.name)): _port(g, node, str(g.value(pn, NS_DF.name)))
+                 for pn in g.objects(node, NS_DF["has-argument"])}
         method = f"on_{get_valid_var_name(bname)}"
         return f"_Leaf({name!r}, runtime, {method!r}, {ports!r})"
 
