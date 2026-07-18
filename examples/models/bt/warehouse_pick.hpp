@@ -7,101 +7,116 @@
 #include <filesystem>
 
 namespace warehouse_pick {
-class WarehousePickRuntime {
- public:
-  virtual ~WarehousePickRuntime() = default;
-  virtual BT::NodeStatus on_battery_ok(BT::TreeNode& node) = 0;
-  virtual BT::NodeStatus on_go_charge(BT::TreeNode& node) = 0;
-  virtual BT::NodeStatus on_object_visible(BT::TreeNode& node) = 0;
-  virtual BT::NodeStatus on_detect_object(BT::TreeNode& node) = 0;
-  virtual BT::NodeStatus on_at_goal(BT::TreeNode& node) = 0;
-  virtual BT::NodeStatus on_move_to(BT::TreeNode& node) = 0;
-  virtual BT::NodeStatus on_open_gripper(BT::TreeNode& node) = 0;
-  virtual BT::NodeStatus on_close_gripper(BT::TreeNode& node) = 0;
-  virtual BT::NodeStatus on_holding(BT::TreeNode& node) = 0;
-  virtual BT::NodeStatus on_inspect(BT::TreeNode& node) = 0;
-  virtual BT::NodeStatus on_place(BT::TreeNode& node) = 0;
+class WarehousePickRuntime
+{
+  public:
+    virtual ~WarehousePickRuntime()                              = default;
+    virtual BT::NodeStatus on_battery_ok(BT::TreeNode &node)     = 0;
+    virtual BT::NodeStatus on_go_charge(BT::TreeNode &node)      = 0;
+    virtual BT::NodeStatus on_object_visible(BT::TreeNode &node) = 0;
+    virtual BT::NodeStatus on_detect_object(BT::TreeNode &node)  = 0;
+    virtual BT::NodeStatus on_at_goal(BT::TreeNode &node)        = 0;
+    virtual BT::NodeStatus on_move_to(BT::TreeNode &node)        = 0;
+    virtual BT::NodeStatus on_open_gripper(BT::TreeNode &node)   = 0;
+    virtual BT::NodeStatus on_close_gripper(BT::TreeNode &node)  = 0;
+    virtual BT::NodeStatus on_holding(BT::TreeNode &node)        = 0;
+    virtual BT::NodeStatus on_inspect(BT::TreeNode &node)        = 0;
+    virtual BT::NodeStatus on_place(BT::TreeNode &node)          = 0;
 };
 
-inline void register_nodes(BT::BehaviorTreeFactory& factory, WarehousePickRuntime& runtime) {
-  factory.registerSimpleCondition(
+inline void register_nodes(BT::BehaviorTreeFactory &factory, WarehousePickRuntime &runtime)
+{
+    factory.registerSimpleCondition(
       "battery_ok",
-      [&runtime](BT::TreeNode& node) { return runtime.on_battery_ok(node); },
+      [&runtime](BT::TreeNode &node) { return runtime.on_battery_ok(node); },
       {
-          BT::InputPort("min_level"),
-      });
-  factory.registerSimpleAction(
+        BT::InputPort("min_level"),
+      }
+    );
+    factory.registerSimpleAction(
       "go_charge",
-      [&runtime](BT::TreeNode& node) { return runtime.on_go_charge(node); },
+      [&runtime](BT::TreeNode &node) { return runtime.on_go_charge(node); },
       {
-          BT::InputPort("dock"),
-      });
-  factory.registerSimpleCondition(
+        BT::InputPort("dock"),
+      }
+    );
+    factory.registerSimpleCondition(
       "object_visible",
-      [&runtime](BT::TreeNode& node) { return runtime.on_object_visible(node); },
+      [&runtime](BT::TreeNode &node) { return runtime.on_object_visible(node); },
       {
-          BT::InputPort("target"),
-      });
-  factory.registerSimpleAction(
+        BT::InputPort("target"),
+      }
+    );
+    factory.registerSimpleAction(
       "detect_object",
-      [&runtime](BT::TreeNode& node) { return runtime.on_detect_object(node); },
+      [&runtime](BT::TreeNode &node) { return runtime.on_detect_object(node); },
       {
-          BT::InputPort("target"),
-          BT::OutputPort("pose"),
-      });
-  factory.registerSimpleCondition(
+        BT::InputPort("target"),
+        BT::OutputPort("pose"),
+      }
+    );
+    factory.registerSimpleCondition(
       "at_goal",
-      [&runtime](BT::TreeNode& node) { return runtime.on_at_goal(node); },
+      [&runtime](BT::TreeNode &node) { return runtime.on_at_goal(node); },
       {
-          BT::InputPort("goal"),
-          BT::InputPort("tolerance"),
-      });
-  factory.registerSimpleAction(
+        BT::InputPort("goal"),
+        BT::InputPort("tolerance"),
+      }
+    );
+    factory.registerSimpleAction(
       "move_to",
-      [&runtime](BT::TreeNode& node) { return runtime.on_move_to(node); },
+      [&runtime](BT::TreeNode &node) { return runtime.on_move_to(node); },
       {
-          BT::InputPort("goal"),
-          BT::InputPort("frame"),
-          BT::InputPort("speed"),
-          BT::InputPort("precise"),
-          BT::InputPort("start_event"),
-          BT::InputPort("end_event"),
-      });
-  factory.registerSimpleAction(
-      "open_gripper",
-      [&runtime](BT::TreeNode& node) { return runtime.on_open_gripper(node); });
-  factory.registerSimpleAction(
+        BT::InputPort("goal"),
+        BT::InputPort("frame"),
+        BT::InputPort("speed"),
+        BT::InputPort("precise"),
+        BT::InputPort("start_event"),
+        BT::InputPort("end_event"),
+      }
+    );
+    factory.registerSimpleAction("open_gripper", [&runtime](BT::TreeNode &node) {
+        return runtime.on_open_gripper(node);
+    });
+    factory.registerSimpleAction(
       "close_gripper",
-      [&runtime](BT::TreeNode& node) { return runtime.on_close_gripper(node); },
+      [&runtime](BT::TreeNode &node) { return runtime.on_close_gripper(node); },
       {
-          BT::BidirectionalPort("width"),
-      });
-  factory.registerSimpleCondition(
+        BT::BidirectionalPort("width"),
+      }
+    );
+    factory.registerSimpleCondition(
       "holding",
-      [&runtime](BT::TreeNode& node) { return runtime.on_holding(node); },
+      [&runtime](BT::TreeNode &node) { return runtime.on_holding(node); },
       {
-          BT::InputPort("object"),
-      });
-  factory.registerSimpleAction(
+        BT::InputPort("object"),
+      }
+    );
+    factory.registerSimpleAction(
       "inspect",
-      [&runtime](BT::TreeNode& node) { return runtime.on_inspect(node); },
+      [&runtime](BT::TreeNode &node) { return runtime.on_inspect(node); },
       {
-          BT::InputPort("object"),
-          BT::OutputPort("result"),
-      });
-  factory.registerSimpleAction(
+        BT::InputPort("object"),
+        BT::OutputPort("result"),
+      }
+    );
+    factory.registerSimpleAction(
       "place",
-      [&runtime](BT::TreeNode& node) { return runtime.on_place(node); },
+      [&runtime](BT::TreeNode &node) { return runtime.on_place(node); },
       {
-          BT::InputPort("object"),
-          BT::InputPort("surface"),
-      });
+        BT::InputPort("object"),
+        BT::InputPort("surface"),
+      }
+    );
 }
 
-inline BT::Tree create_tree(BT::BehaviorTreeFactory& factory,
-                            const std::filesystem::path& xml_path,
-                            BT::Blackboard::Ptr blackboard = BT::Blackboard::create()) {
-  return factory.createTreeFromFile(xml_path, blackboard);
+inline BT::Tree create_tree(
+  BT::BehaviorTreeFactory     &factory,
+  const std::filesystem::path &xml_path,
+  BT::Blackboard::Ptr          blackboard = BT::Blackboard::create()
+)
+{
+    return factory.createTreeFromFile(xml_path, blackboard);
 }
-}  // namespace warehouse_pick
-#endif  // WAREHOUSE_PICK_BT_HPP
+} // namespace warehouse_pick
+#endif // WAREHOUSE_PICK_BT_HPP

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4" main_tree_to_execute="dual_arm">
+  <BehaviorTree ID="dual_arm">
+    <ParallelAll max_failures="1" _onFailure="coordination_failed := true" _onSuccess="coordination_complete := true">
+      <RetryUntilSuccessful num_attempts="3" _onFailure="left_arm_failed := true">
+        <FSMEvent fsm="left_arm" event="TAKE_POSE" await="TAKE_POSE_DONE" await_kind="event" _failureIf="left_arm_fault == true" />
+      </RetryUntilSuccessful>
+      <RetryUntilSuccessful num_attempts="3" _onFailure="right_arm_failed := true">
+        <FSMEvent fsm="right_arm" event="PICK" await="PICK_DONE" await_kind="event" _failureIf="right_arm_fault == true" />
+      </RetryUntilSuccessful>
+    </ParallelAll>
+  </BehaviorTree>
+  <TreeNodesModel>
+    <Action ID="FSMEvent">
+      <input_port name="fsm" />
+      <input_port name="event" />
+      <input_port name="await" />
+      <input_port name="await_kind" />
+      <input_port name="on_fail" />
+      <input_port name="on_fail_kind" />
+    </Action>
+  </TreeNodesModel>
+</root>

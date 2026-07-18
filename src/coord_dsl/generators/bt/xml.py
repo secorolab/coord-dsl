@@ -8,6 +8,7 @@ from xml.etree.ElementTree import Element, SubElement, indent, tostring
 import math
 
 from rdflib import Namespace, RDF
+from rdflib.namespace import split_uri
 from rdf_utils.namespace import NS_MM_QUDT_UNIT
 from rdf_utils.models.vocab import URI_QUDT_PRED_UNIT, URI_QUDT_PRED_VALUE
 
@@ -157,7 +158,20 @@ def _render(g, node):
         _add_bindings(g, node, el)
         _add_common(g, node, el)
     elif NS_BT.FSMEvent in types:
-        raise ValueError("FSM nodes are only supported by the BT JSON-LD generator")
+        instance = g.value(node, NS_BT["on-fsm-instance"])
+        attrs = {
+            "fsm": str(g.value(instance, NS_BT["instance-name"])),
+            "event": split_uri(g.value(node, NS_BT["of-event"]))[1],
+            "await": split_uri(g.value(node, NS_BT["await-target"]))[1],
+            "await_kind": str(g.value(node, NS_BT["await-kind"])),
+        }
+        fail = g.value(node, NS_BT["fail-target"])
+        if fail is not None:
+            attrs["on_fail"] = split_uri(fail)[1]
+            attrs["on_fail_kind"] = str(g.value(node, NS_BT["fail-kind"]))
+        el = Element("FSMEvent", attrs)
+        _add_bindings(g, node, el)
+        _add_common(g, node, el)
     elif NS_BT.Leaf in types:
         beh = g.value(node, NS_BT["of-behaviour"])
         name = str(g.value(beh, NS_BT["behaviour-name"]))
@@ -229,6 +243,10 @@ def _tree_nodes_model(g):
             continue
         el = SubElement(tnm, "SubTree", {"ID": str(g.value(t, NS_BT["behaviour-tree-name"]))})
         _port_decls(g, t, el)
+    if next(g.subjects(RDF.type, NS_BT.FSMEvent), None) is not None:
+        el = SubElement(tnm, "Action", {"ID": "FSMEvent"})
+        for port in ("fsm", "event", "await", "await_kind", "on_fail", "on_fail_kind"):
+            SubElement(el, "input_port", {"name": port})
     return tnm
 
 

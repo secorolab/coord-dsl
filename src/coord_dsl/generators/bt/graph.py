@@ -210,21 +210,39 @@ def get_bt_graph(model) -> tuple[Graph, dict, URIRef]:
         elif isinstance(node, FSMEventNode):
             fsm_model, fsm_ref = fsm_refs[node.fsm]
             if node.await_fsm is not node.fsm:
-                raise ValueError("An FSM event must await an event from the FSM it dispatches to")
-            event = next((event for event in fsm_model.fsm.events if event.name == node.event), None)
+                raise ValueError("An FSM event must await a target from the FSM it dispatches to")
+            event = next((e for e in fsm_model.fsm.events if e.name == node.event), None)
             if event is None:
                 raise ValueError(f"FSM {node.fsm.name!r} does not declare event {node.event!r}")
-            awaited_event = next(
-                (event for event in fsm_model.fsm.events if event.name == node.await_event), None
-            )
-            if awaited_event is None:
-                raise ValueError(f"FSM {node.fsm.name!r} does not declare event {node.await_event!r}")
-            if not any(reaction.when is awaited_event for reaction in fsm_model.fsm.reactions):
-                raise ValueError(f"FSM {node.fsm.name!r} does not handle event {node.await_event!r}")
+
+            def resolve_target(name, role):
+                """A completion/failure target is either an event (edge) or a state (level)."""
+                ev = next((e for e in fsm_model.fsm.events if e.name == name), None)
+                st = next((s for s in fsm_model.fsm.states if s.name == name), None)
+                if ev is not None and st is not None:
+                    raise ValueError(
+                        f"FSM {node.fsm.name!r} {role} target {name!r} is both an event and a state"
+                    )
+                if ev is not None:
+                    if not any(reaction.when is ev for reaction in fsm_model.fsm.reactions):
+                        raise ValueError(f"FSM {node.fsm.name!r} does not handle event {name!r}")
+                    return "event", URIRef(ev.uri)
+                if st is not None:
+                    return "state", URIRef(st.uri)
+                raise ValueError(f"FSM {node.fsm.name!r} has no event or state {name!r}")
+
+            await_kind, await_uri = resolve_target(node.await_target, "await")
             g.add((uri, RDF.type, NS_BT.FSMEvent))
             g.add((uri, NS_BT["on-fsm-instance"], fsm_instance_uri[node.fsm]))
             g.add((uri, NS_BT["of-event"], URIRef(event.uri)))
-            g.add((uri, NS_BT["await-event"], URIRef(awaited_event.uri)))
+            g.add((uri, NS_BT["await-kind"], Literal(await_kind)))
+            g.add((uri, NS_BT["await-target"], await_uri))
+            if node.fail_target:
+                if node.fail_fsm is not node.fsm:
+                    raise ValueError("An FSM event must fail on a target from the FSM it dispatches to")
+                fail_kind, fail_uri = resolve_target(node.fail_target, "on-fail")
+                g.add((uri, NS_BT["fail-kind"], Literal(fail_kind)))
+                g.add((uri, NS_BT["fail-target"], fail_uri))
             add_bindings(uri, node)
         else:
             g.add((uri, RDF.type, NS_BT.Leaf))

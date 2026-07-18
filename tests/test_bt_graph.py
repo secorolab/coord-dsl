@@ -107,7 +107,7 @@ class BtGraphTest(unittest.TestCase):
             },
         )
         self.assertEqual(
-            {str(graph.value(node, NS_BT["await-event"])) for node in event_nodes},
+            {str(graph.value(node, NS_BT["await-target"])) for node in event_nodes},
             {
                 "https://secorolab.github.io/models/coordination/fsm/right-arm/PICK_DONE",
                 "https://secorolab.github.io/models/coordination/fsm/right-arm/HANDOVER_DONE",
@@ -115,6 +115,49 @@ class BtGraphTest(unittest.TestCase):
                 "https://secorolab.github.io/models/coordination/fsm/left-arm/PLACE_DONE",
             },
         )
+        self.assertEqual(
+            {str(graph.value(node, NS_BT["await-kind"])) for node in event_nodes}, {"event"}
+        )
+
+    def test_fsm_events_render_to_xml_and_cpp(self):
+        model = bt_metamodel().model_from_file("src/coord-dsl/examples/models/bt/arm_handover_fsms.btree")
+        with TemporaryDirectory() as directory:
+            xml_out = Path(directory) / "arm_handover.xml"
+            hpp_out = Path(directory) / "arm_handover.hpp"
+            gen_bt_xml_file(None, model, xml_out, False, False)
+            gen_bt_cpp_file(None, model, hpp_out, False, False)
+            xml = xml_out.read_text()
+            header = hpp_out.read_text()
+
+        self.assertIn('<FSMEvent fsm="right_arm" event="PICK" await="PICK_DONE" await_kind="event" />', xml)
+        self.assertIn('#include "left_arm.hpp"', header)
+        self.assertIn("class FSMEventNode : public BT::StatefulActionNode", header)
+        self.assertIn("virtual void step_left_arm(struct fsm_nbx* fsm) = 0;", header)
+        self.assertIn("if (event == \"PICK\") return right_arm::PICK;", header)
+        self.assertIn("if (state == \"PICKED\") return right_arm::PICKED;", header)
+        self.assertIn('factory.registerNodeType<FSMEventNode>("FSMEvent", &runtime);', header)
+
+    def test_await_state_and_on_fail_render(self):
+        source = (
+            'ns n = "https://example.test/"\n'
+            'fsm arm = "left_arm.fsm"\n'
+            "main btree (ns=n) t {\n"
+            "  send <arm.TAKE_POSE> await <arm.AT_TAKE_POSE> on-fail <arm.PLACED>\n"
+            "}\n"
+        )
+        model = bt_metamodel().model_from_str(source)
+        model._tx_filename = "src/coord-dsl/examples/models/bt/t.btree"
+        with TemporaryDirectory() as directory:
+            xml_out = Path(directory) / "t.xml"
+            hpp_out = Path(directory) / "t.hpp"
+            gen_bt_xml_file(None, model, xml_out, False, False)
+            gen_bt_cpp_file(None, model, hpp_out, False, False)
+            xml = xml_out.read_text()
+
+        self.assertIn('await="AT_TAKE_POSE"', xml)
+        self.assertIn('await_kind="state"', xml)
+        self.assertIn('on_fail="PLACED"', xml)
+        self.assertIn('on_fail_kind="state"', xml)
 
     def test_main_tree_is_an_explicit_model_field(self):
         model = parse(

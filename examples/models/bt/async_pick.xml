@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root BTCPP_format="4" main_tree_to_execute="async_pick">
+  <BehaviorTree ID="async_pick">
+    <Sequence _onSuccess="pick_complete := true" _onFailure="pick_failed := true">
+      <FSMEvent fsm="right_arm" event="PICK" await="PICKED" await_kind="state" />
+      <FSMEvent fsm="gripper" event="GRASP" await="GRASPED" await_kind="state" on_fail="FAULT" on_fail_kind="state" />
+    </Sequence>
+  </BehaviorTree>
+  <TreeNodesModel>
+    <Action ID="FSMEvent">
+      <input_port name="fsm" />
+      <input_port name="event" />
+      <input_port name="await" />
+      <input_port name="await_kind" />
+      <input_port name="on_fail" />
+      <input_port name="on_fail_kind" />
+    </Action>
+  </TreeNodesModel>
+</root>

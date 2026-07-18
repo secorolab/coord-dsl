@@ -70,12 +70,15 @@ class FSMDecl(IHasParent):
 
 
 class FSMEventNode(IHasParent):
-    def __init__(self, parent, fsm, event, await_fsm, await_event, instance, ports, guards):
+    def __init__(self, parent, fsm, event, await_fsm, await_target, fail_fsm, fail_target,
+                 instance, ports, guards):
         super().__init__(parent=parent)
         self.fsm = fsm
         self.event = event
         self.await_fsm = await_fsm
-        self.await_event = await_event
+        self.await_target = await_target
+        self.fail_fsm = fail_fsm
+        self.fail_target = fail_target
         self.instance = instance
         self.ports = ports
         self.guards = guards

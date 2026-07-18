@@ -11,6 +11,7 @@ from textx import GeneratorDesc, LanguageDesc, metamodel_from_file
 from textx.scoping import providers as scoping_providers
 
 from rdf_utils.naming import get_valid_var_name
+from coord_dsl.generators.common import clang_format_file
 from coord_dsl.generators.bt.classes import (
     BehaviourDecl,
     BehaviourTree,
@@ -31,6 +32,7 @@ from coord_dsl.generators.bt.classes import (
 )
 from coord_dsl.generators.bt.graph import get_bt_graph
 from coord_dsl.generators.bt.xml import BUILTIN_TAG, evented_behaviours, gen_bt_xml
+from coord_dsl.generators.fsm.registration import fsm_metamodel
 
 
 GRAMMAR_PATH = str(files("coord_dsl.metamodels").joinpath("bt.tx"))
@@ -124,15 +126,39 @@ def gen_bt_cpp_file(metamodel, model, output_path, overwrite, debug, **kwargs):
                 "ports": ports,
             }
         )
+    fsm_instances = []
+    for fsm in model.fsms:
+        path = (Path(model._tx_filename).parent / fsm.source).resolve()
+        fsm_model = fsm_metamodel().model_from_file(path)
+        var = get_valid_var_name(fsm.name)
+        fsm_instances.append(
+            {
+                "name": fsm.name,
+                "var": var,
+                "member": f"fsm_{var}_",
+                "namespace": fsm_model.fsm.name.lower(),
+                "header": f"{fsm_model.fsm.name}.hpp",
+                "events": [
+                    {"name": event.name, "enum": get_valid_var_name(event.name).upper()}
+                    for event in fsm_model.fsm.events
+                ],
+                "states": [
+                    {"name": state.name, "enum": get_valid_var_name(state.name).upper()}
+                    for state in fsm_model.fsm.states
+                ],
+            }
+        )
     rendered = template.render(
         guard=f"{name.upper()}_BT_HPP",
         namespace=name,
         runtime_class=f"{name.title().replace('_', '')}Runtime",
         behaviours=behaviours,
+        fsm_instances=fsm_instances,
     )
     output_path = output_path or _output_name(model, "hpp")
     with open(output_path, "w") as f:
         f.write(rendered)
+    clang_format_file(output_path)
     print(f"BT C++ header generated at {output_path}")
 
 

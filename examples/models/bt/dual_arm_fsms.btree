@@ -1,7 +1,5 @@
-// SPDX-License-Identifier: MPL-2.0
-// SPDX-FileCopyrightText: 2026 SECORO AG (secoro.uni-bremen.de)
-// Author: Vamsi Kalagaturu
 ns arms = "https://secorolab.github.io/models/coordination/bt/dual-arm/"
+
 fsm left_arm = "left_arm.fsm"
 fsm right_arm = "right_arm.fsm"
 

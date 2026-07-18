@@ -1,7 +1,30 @@
 # SPDX-License-Identifier: MPL-2.0
 # Author: Minh Nguyen
 
+import shutil
+import subprocess
+from pathlib import Path
+
 from rdflib import Namespace, URIRef
+
+
+def clang_format_file(path):
+    """Format a generated C++ file in place using the nearest `.clang-format`.
+
+    No-op when clang-format is unavailable or no style file is found upward
+    (e.g. output written to a temp dir), so callers stay side-effect-free there.
+    """
+    path = Path(path)
+    style = next(
+        (p / ".clang-format" for p in path.resolve().parents if (p / ".clang-format").is_file()),
+        None,
+    )
+    if style is None or shutil.which("clang-format") is None:
+        return
+    subprocess.run(
+        ["clang-format", "-i", f"--style=file:{style}", "-fallback-style=none", str(path)],
+        check=False,
+    )
 
 
 class IHasParent(object):

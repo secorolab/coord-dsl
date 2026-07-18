@@ -9,6 +9,7 @@ from pathlib import Path
 from textx import GeneratorDesc, LanguageDesc, metamodel_from_file
 from textx.scoping import providers as scoping_providers
 
+from coord_dsl.generators.common import clang_format_file
 from coord_dsl.generators.fsm.classes import Event, FSM, FiredEvent, Reaction, State, Transition
 from coord_dsl.generators.fsm.graph import gen_cpp_header, gen_json, gen_python_code, get_fsm_graph
 
@@ -64,6 +65,7 @@ def gen_cpp(metamodel, model, output_path, overwrite, debug, **kwargs):
     output_path = output_path or Path(model._tx_filename).parent / f"{model.fsm.name}.hpp"
     with open(output_path, "w") as f:
         f.write(rendered)
+    clang_format_file(output_path)
     print(f"FSM C code generated at {output_path}")
 
 

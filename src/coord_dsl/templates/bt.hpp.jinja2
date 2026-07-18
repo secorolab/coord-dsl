@@ -5,16 +5,175 @@
 
 #include <behaviortree_cpp/bt_factory.h>
 #include <filesystem>
+{% if fsm_instances %}
+#include <string>
+
+#include "coord2b/functions/event_loop.h"
+#include "coord2b/functions/fsm.h"
+{% for inst in fsm_instances %}
+#include "{{ inst.header }}"
+{% endfor %}
+{% endif %}
 
 namespace {{ namespace }} {
 class {{ runtime_class }} {
  public:
+{% if fsm_instances %}
+  {{ runtime_class }}() {
+{% for inst in fsm_instances %}
+    {{ inst.member }} = {{ inst.namespace }}::create_fsm();
+{% endfor %}
+  }
+  virtual ~{{ runtime_class }}() {
+{% for inst in fsm_instances %}
+    {{ inst.namespace }}::destroy_fsm({{ inst.member }});
+{% endfor %}
+  }
+{% else %}
   virtual ~{{ runtime_class }}() = default;
+{% endif %}
 {% for behaviour in behaviours %}
   virtual BT::NodeStatus {{ behaviour.method }}(BT::TreeNode& node) = 0;
 {% endfor %}
+{% for inst in fsm_instances %}
+  // Advance the {{ inst.name }} controller one tick; produce completion events
+  // (e.g. *_DONE) onto fsm->eventData once its current sub-behaviour finishes.
+  virtual void step_{{ inst.var }}(struct fsm_nbx* fsm) = 0;
+{% endfor %}
+{% if fsm_instances %}
+
+  struct fsm_nbx* fsm_of(const std::string& instance) {
+{% for inst in fsm_instances %}
+    if (instance == "{{ inst.name }}") return {{ inst.member }};
+{% endfor %}
+    return nullptr;
+  }
+
+  int event_index(const std::string& instance, const std::string& event) {
+{% for inst in fsm_instances %}
+    if (instance == "{{ inst.name }}") {
+{% for ev in inst.events %}
+      if (event == "{{ ev.name }}") return {{ inst.namespace }}::{{ ev.enum }};
+{% endfor %}
+    }
+{% endfor %}
+    return -1;
+  }
+
+  int state_index(const std::string& instance, const std::string& state) {
+{% for inst in fsm_instances %}
+    if (instance == "{{ inst.name }}") {
+{% for st in inst.states %}
+      if (state == "{{ st.name }}") return {{ inst.namespace }}::{{ st.enum }};
+{% endfor %}
+    }
+{% endfor %}
+    return -1;
+  }
+
+  void step(const std::string& instance, struct fsm_nbx* fsm) {
+{% for inst in fsm_instances %}
+    if (instance == "{{ inst.name }}") { step_{{ inst.var }}(fsm); return; }
+{% endfor %}
+  }
+
+  // ---- Execution policy. Defaults drive the FSM synchronously from the BT
+  // tick; override these for a self-driving controller (e.g. a real-time
+  // thread stepping the FSM independently -- then dispatch()/current_state()
+  // must be made thread-safe and advance() a no-op). ----
+
+  // Inject a command event toward the instance's FSM.
+  virtual void dispatch(const std::string& instance, unsigned int event) {
+    produce_event(fsm_of(instance)->eventData, event);
+  }
+  // One coordination step: run the controller behaviour, then the coord2b step.
+  virtual void advance(const std::string& instance) {
+    struct fsm_nbx* fsm = fsm_of(instance);
+    step(instance, fsm);
+    reconfig_event_buffers(fsm->eventData);
+    fsm_step_nbx(fsm);
+  }
+  // Edge detection: was `event` present on the current buffer this step?
+  virtual bool event_present(const std::string& instance, unsigned int event) {
+    return consume_event(fsm_of(instance)->eventData, event);
+  }
+  // Level detection: the instance's current FSM state index.
+  virtual unsigned int current_state(const std::string& instance) {
+    return fsm_of(instance)->currentStateIndex;
+  }
+
+ private:
+{% for inst in fsm_instances %}
+  struct fsm_nbx* {{ inst.member }} = nullptr;
+{% endfor %}
+{% endif %}
 };
 
+{% if fsm_instances %}
+// Drives an FSM instance from the tree: dispatches `event`, then each tick
+// checks completion (`await`, edge on an event or level on a state) and
+// optional failure (`on_fail`). RUNNING while the sub-behaviour runs.
+class FSMEventNode : public BT::StatefulActionNode {
+ public:
+  FSMEventNode(const std::string& name, const BT::NodeConfig& config, {{ runtime_class }}* runtime)
+      : BT::StatefulActionNode(name, config), runtime_(runtime) {}
+
+  static BT::PortsList providedPorts() {
+    return {BT::InputPort<std::string>("fsm"),        BT::InputPort<std::string>("event"),
+            BT::InputPort<std::string>("await"),      BT::InputPort<std::string>("await_kind"),
+            BT::InputPort<std::string>("on_fail"),    BT::InputPort<std::string>("on_fail_kind")};
+  }
+
+  BT::NodeStatus onStart() override {
+    std::string event, await, await_kind;
+    if (!getInput("fsm", instance_) || !getInput("event", event) || !getInput("await", await) ||
+        !getInput("await_kind", await_kind)) {
+      return BT::NodeStatus::FAILURE;
+    }
+    command_ = runtime_->event_index(instance_, event);
+    await_is_state_ = (await_kind == "state");
+    await_index_ = resolve(await, await_is_state_);
+
+    std::string on_fail, on_fail_kind;
+    if (getInput("on_fail", on_fail) && !on_fail.empty() && getInput("on_fail_kind", on_fail_kind)) {
+      fail_is_state_ = (on_fail_kind == "state");
+      fail_index_ = resolve(on_fail, fail_is_state_);
+    }
+
+    if (runtime_->fsm_of(instance_) == nullptr || command_ < 0 || await_index_ < 0) {
+      return BT::NodeStatus::FAILURE;
+    }
+    runtime_->dispatch(instance_, static_cast<unsigned int>(command_));
+    return BT::NodeStatus::RUNNING;
+  }
+
+  BT::NodeStatus onRunning() override {
+    runtime_->advance(instance_);
+    if (fail_index_ >= 0 && reached(fail_index_, fail_is_state_)) return BT::NodeStatus::FAILURE;
+    return reached(await_index_, await_is_state_) ? BT::NodeStatus::SUCCESS
+                                                  : BT::NodeStatus::RUNNING;
+  }
+
+  void onHalted() override {}
+
+ private:
+  int resolve(const std::string& name, bool is_state) {
+    return is_state ? runtime_->state_index(instance_, name)
+                    : runtime_->event_index(instance_, name);
+  }
+  bool reached(int index, bool is_state) {
+    return is_state
+               ? runtime_->current_state(instance_) == static_cast<unsigned int>(index)
+               : runtime_->event_present(instance_, static_cast<unsigned int>(index));
+  }
+
+  {{ runtime_class }}* runtime_;
+  std::string instance_;
+  int command_ = -1, await_index_ = -1, fail_index_ = -1;
+  bool await_is_state_ = false, fail_is_state_ = false;
+};
+
+{% endif %}
 inline void register_nodes(BT::BehaviorTreeFactory& factory, {{ runtime_class }}& runtime) {
 {% for behaviour in behaviours %}
   factory.registerSimple{{ "Action" if behaviour.kind == "action" else "Condition" }}(
@@ -26,6 +185,9 @@ inline void register_nodes(BT::BehaviorTreeFactory& factory, {{ runtime_class }}
 {% endfor %}
       }{% endif %});
 {% endfor %}
+{% if fsm_instances %}
+  factory.registerNodeType<FSMEventNode>("FSMEvent", &runtime);
+{% endif %}
 }
 
 inline BT::Tree create_tree(BT::BehaviorTreeFactory& factory,

@@ -82,7 +82,10 @@ SubTreeNode:
 ;
 
 FSMEventNode:
-    "send" "<" fsm=[FSMDecl|IRI_TRUNK] "." event=IRI_TRUNK ">" "await" "<" await_fsm=[FSMDecl|IRI_TRUNK] "." await_event=IRI_TRUNK ">" ("as" instance=IRI_TRUNK)? ("(" ports+=Port[","] ")")? (guards=NodeGuards)?
+    "send" "<" fsm=[FSMDecl|IRI_TRUNK] "." event=IRI_TRUNK ">"
+    "await" "<" await_fsm=[FSMDecl|IRI_TRUNK] "." await_target=IRI_TRUNK ">"
+    ("on-fail" "<" fail_fsm=[FSMDecl|IRI_TRUNK] "." fail_target=IRI_TRUNK ">")?
+    ("as" instance=IRI_TRUNK)? ("(" ports+=Port[","] ")")? (guards=NodeGuards)?
 ;
 
 NodeGuards:
