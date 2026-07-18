@@ -17,6 +17,10 @@ docs = [
     "sphinx>=7",
     "furo"
 ]
+# Runtime for behaviour trees generated with `--target python`.
+pytrees = [
+    "py_trees"
+]
 
 [project.urls]
 "Homepage" = "https://github.com/secorolab/coord-dsl.git"
@@ -45,6 +49,7 @@ where = ["src"]
 "fsm_python" = "coord_dsl.generators.fsm.registration:fsm_python_gen"
 "bt_xml" = "coord_dsl.generators.bt.registration:bt_xml_gen"
 "bt_cpp" = "coord_dsl.generators.bt.registration:bt_cpp_gen"
+"bt_python" = "coord_dsl.generators.bt.registration:bt_python_gen"
 
 [ruff]
 line-length = 100

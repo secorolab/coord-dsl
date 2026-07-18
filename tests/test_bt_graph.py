@@ -11,7 +11,12 @@ from rdflib import Namespace, RDF, URIRef
 from textx.exceptions import TextXSyntaxError
 
 from coord_dsl.generators.bt.graph import URI_MM_BT, get_bt_graph
-from coord_dsl.generators.bt.registration import bt_metamodel, gen_bt_cpp_file, gen_bt_xml_file
+from coord_dsl.generators.bt.registration import (
+    bt_metamodel,
+    gen_bt_cpp_file,
+    gen_bt_python_file,
+    gen_bt_xml_file,
+)
 
 
 NS_BT = Namespace(URI_MM_BT)
@@ -169,6 +174,30 @@ class BtGraphTest(unittest.TestCase):
         self.assertIn('await_kind="state"', xml)
         self.assertIn('on_fail="PLACED"', xml)
         self.assertIn('on_fail_kind="state"', xml)
+
+    def test_fsm_events_render_to_pytrees(self):
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "py_pick.btree"))
+        with TemporaryDirectory() as directory:
+            output = Path(directory) / "py_pick.py"
+            gen_bt_python_file(None, model, output, False, False)
+            module = output.read_text()
+
+        self.assertIn("import right_arm", module)
+        self.assertIn("class PyPickRuntime", module)
+        self.assertIn("class _FSMEvent(py_trees.behaviour.Behaviour)", module)
+        self.assertIn("def step_right_arm(self, fsm):", module)
+        self.assertIn("py_trees.composites.Sequence(", module)
+        self.assertIn("_FSMEvent('right_arm.PICK', runtime, 'right_arm', 'PICK', 'PICKED', 'state')", module)
+        self.assertIn("on_fail='FAULT', on_fail_kind='state'", module)
+        # the generated module must be syntactically valid Python
+        compile(module, "py_pick.py", "exec")
+
+    def test_pytrees_rejects_guards(self):
+        # arm_handover uses [on-success]/[on-failure] guards -> unsupported in py_trees
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "arm_handover_fsms.btree"))
+        with TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(NotImplementedError, "guard"):
+                gen_bt_python_file(None, model, Path(directory) / "x.py", False, False)
 
     def test_main_tree_is_an_explicit_model_field(self):
         model = parse(
