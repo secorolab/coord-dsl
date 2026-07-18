@@ -17,13 +17,24 @@ from coord_dsl.generators.bt.registration import bt_metamodel, gen_bt_cpp_file, 
 NS_BT = Namespace(URI_MM_BT)
 
 
+def _repo_root() -> Path:
+    """Locate the project root by its pyproject.toml marker, like pytest's rootdir."""
+    for parent in Path(__file__).resolve().parents:
+        if (parent / "pyproject.toml").is_file():
+            return parent
+    raise RuntimeError("could not locate the coord-dsl project root")
+
+
+MODELS = _repo_root() / "examples" / "models"
+
+
 def parse(source):
     return bt_metamodel().model_from_str(source)
 
 
 class BtGraphTest(unittest.TestCase):
     def test_generates_btcpp_header(self):
-        model = bt_metamodel().model_from_file("src/coord-dsl/examples/models/bt/fetch_and_place.btree")
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "fetch_and_place.btree"))
         with TemporaryDirectory() as directory:
             output = Path(directory) / "warehouse_pick.hpp"
             gen_bt_cpp_file(None, model, output, False, False)
@@ -39,7 +50,7 @@ class BtGraphTest(unittest.TestCase):
         self.assertNotIn("<BehaviorTree", header)
 
     def test_loop_uses_btcpp_string_loop(self):
-        model = bt_metamodel().model_from_file("src/coord-dsl/examples/models/bt/fetch_and_place.btree")
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "fetch_and_place.btree"))
         with TemporaryDirectory() as directory:
             output = Path(directory) / "warehouse_pick.xml"
             gen_bt_xml_file(None, model, output, False, False)
@@ -48,7 +59,7 @@ class BtGraphTest(unittest.TestCase):
         self.assertIn("<LoopString", xml)
 
     def test_declared_fsm_instances_are_included_in_jsonld(self):
-        model = bt_metamodel().model_from_file("src/coord-dsl/examples/models/bt/dual_arm_fsms.btree")
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "dual_arm_fsms.btree"))
 
         graph, _, _ = get_bt_graph(model)
         fsm_instances = set(graph.subjects(RDF.type, NS_BT.FSMInstance))
@@ -81,7 +92,7 @@ class BtGraphTest(unittest.TestCase):
         )
 
     def test_handover_coordinates_fsm_phases(self):
-        model = bt_metamodel().model_from_file("src/coord-dsl/examples/models/bt/arm_handover_fsms.btree")
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "arm_handover_fsms.btree"))
         sequence = model.main_tree.root
         self.assertTrue(all(node.fsm is node.await_fsm for node in sequence.children))
 
@@ -120,7 +131,7 @@ class BtGraphTest(unittest.TestCase):
         )
 
     def test_fsm_events_render_to_xml_and_cpp(self):
-        model = bt_metamodel().model_from_file("src/coord-dsl/examples/models/bt/arm_handover_fsms.btree")
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "arm_handover_fsms.btree"))
         with TemporaryDirectory() as directory:
             xml_out = Path(directory) / "arm_handover.xml"
             hpp_out = Path(directory) / "arm_handover.hpp"
@@ -146,7 +157,7 @@ class BtGraphTest(unittest.TestCase):
             "}\n"
         )
         model = bt_metamodel().model_from_str(source)
-        model._tx_filename = "src/coord-dsl/examples/models/bt/t.btree"
+        model._tx_filename = str(MODELS / "bt" / "t.btree")
         with TemporaryDirectory() as directory:
             xml_out = Path(directory) / "t.xml"
             hpp_out = Path(directory) / "t.hpp"
