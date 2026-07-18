@@ -32,6 +32,13 @@ An **FSM** header hands you ``create_fsm()``, the state/event enums, and
 ``fsm_step``. Nothing runs until *you* call them in a loop. You "define
 behaviour" by writing the function that produces and consumes events.
 
+.. note::
+
+   The event loop only works with states that span at least **two** steps —
+   work that completes within a single step should not get its own state (see
+   `coord-dsl@5d983e2
+   <https://github.com/secorolab/coord-dsl/commit/5d983e2011957c373ca829f538c3baaa79266308>`_).
+
 A **BT** header hands you an abstract runtime class with one method per leaf.
 You fill the callbacks; the engine owns the loop and calls them.
 
