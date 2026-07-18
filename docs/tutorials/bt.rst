@@ -6,10 +6,6 @@ reactive control policy. This tutorial models one, generates it, and runs it —
 with a full **C++** section (BehaviorTree.CPP_) and a full **Python** section
 (py_trees_).
 
-.. contents::
-   :local:
-   :depth: 1
-
 Modelling
 ---------
 

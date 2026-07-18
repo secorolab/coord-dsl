@@ -10,10 +10,6 @@ The tutorial has a full **Python** section (py_trees_) and a full **C++** sectio
 Read :doc:`../concepts` first — "who owns the loop?" is the model behind
 everything here.
 
-.. contents::
-   :local:
-   :depth: 1
-
 Modelling
 ---------
 

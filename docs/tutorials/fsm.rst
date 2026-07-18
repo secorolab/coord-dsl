@@ -6,10 +6,6 @@ tutorial models one, generates it, and runs it — with a full **Python** sectio
 and a full **C++** section. They share the same model and the same event-loop
 semantics; only the runtime language differs.
 
-.. contents::
-   :local:
-   :depth: 1
-
 Modelling
 ---------
 
