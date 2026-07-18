@@ -9,7 +9,9 @@ readme = "README.md"
 requires-python = ">=3.7"
 dependencies = [
     "textX>=4.1.0",
-    "textx_ls_core"
+    "textx_ls_core",
+    "jinja2",
+    "rdflib",
 ]
 
 [project.optional-dependencies]
