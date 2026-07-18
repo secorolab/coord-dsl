@@ -143,5 +143,28 @@ complete one. Mappings:
    (``script``, ``set_blackboard``). Use the C++/XML backend for those, or keep
    Python trees guard-free.
 
+Relationship to py_trees' XML parser
+''''''''''''''''''''''''''''''''''''
+
+The ``python`` target emits **bespoke** py_trees code and passes leaf ports as a
+plain dict — it is *not* a faithful projection of the ``xml`` target, and the
+composite mappings above are approximations.
+
+py_trees ships an *experimental* BehaviorTree.CPP-compatible XML parser
+(``py_trees.parsers.behaviour_tree_xml``) that could, in principle, load the very
+``.xml`` we already generate and wire ports to the blackboard via its typed
+`ports <https://py-trees.readthedocs.io/en/devel/ports.html>`_ system —
+collapsing Python and C++ onto one structural artifact. That is the intended
+convergence path, but it is not adopted here yet because:
+
+* the parser is marked experimental, and py_trees' public ports API is not in a
+  stable release;
+* the custom ``FSMEvent`` node and FSM instances would need registering with the
+  parser's node registry;
+* BehaviorTree.CPP **scripted guards** have no py_trees equivalent either way.
+
+Until those settle, treat the Python target as a guard-free subset; the
+C++/XML backend remains the complete one.
+
 .. _BehaviorTree.CPP: https://www.behaviortree.dev/
 .. _py_trees: https://py-trees.readthedocs.io/
