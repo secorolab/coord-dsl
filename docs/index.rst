@@ -35,14 +35,18 @@ From one model you generate:
      - ``cpp``
      - A runtime contract + node registrations (BehaviorTree.CPP)
    * - BT
+     - ``python``
+     - A py_trees_ tree + runtime contract
+   * - BT
      - ``jsonld``
-     - RDF graph (the only target that models ``send/await`` semantics)
+     - RDF graph (the canonical form; models ``send/await`` semantics)
 
 .. note::
 
-   FSMs execute in **Python or C++**. Behaviour trees execute in **C++**
-   (BehaviorTree.CPP); on the Python side you author the model and run the
-   generators. See :doc:`concepts` for why.
+   Both languages execute in **Python or C++**. FSMs use the ``coord_dsl``
+   runtime (Python) or coord2b_ (C++); behaviour trees use py_trees_ (Python) or
+   BehaviorTree.CPP_ (C++). Each tutorial has separate **Python** and **C++**
+   sections. See :doc:`concepts` for the shared execution model.
 
 .. toctree::
    :maxdepth: 2
@@ -57,3 +61,4 @@ From one model you generate:
 .. _textX: https://textx.github.io/textX/
 .. _coord2b: https://github.com/rosym-project/coord2b
 .. _BehaviorTree.CPP: https://www.behaviortree.dev/
+.. _py_trees: https://py-trees.readthedocs.io/

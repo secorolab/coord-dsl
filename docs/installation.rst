@@ -30,8 +30,12 @@ Generated **C++** depends on two libraries:
   (``find_package(coord2b)``).
 * BehaviorTree.CPP_ v4 — the behaviour-tree engine, for BT and BT+FSM.
 
-Generated **Python** for FSMs depends only on ``coord_dsl`` itself
-(``coord_dsl.fsm`` and ``coord_dsl.event_loop`` provide the runtime).
+Generated **Python** depends on:
+
+* ``coord_dsl`` itself — ``coord_dsl.fsm`` and ``coord_dsl.event_loop`` are the
+  FSM runtime (no extra install).
+* py_trees_ — only for the behaviour-tree ``python`` target
+  (``pip install py_trees``).
 
 Optional: code formatting
 -------------------------
@@ -50,3 +54,4 @@ Building these docs
 
 .. _coord2b: https://github.com/rosym-project/coord2b
 .. _BehaviorTree.CPP: https://www.behaviortree.dev/
+.. _py_trees: https://py-trees.readthedocs.io/

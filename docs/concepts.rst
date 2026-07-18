@@ -25,8 +25,8 @@ generated code obvious.
      - the loop *and* the per-state behaviour
      - per-leaf callbacks
    * - Executes in
-     - Python or C++
-     - C++ (BehaviorTree.CPP)
+     - Python (``coord_dsl``) or C++ (coord2b)
+     - Python (py_trees) or C++ (BehaviorTree.CPP)
 
 An **FSM** header hands you ``create_fsm()``, the state/event enums, and
 ``fsm_step``. Nothing runs until *you* call them in a loop. You "define
