@@ -54,6 +54,7 @@ From one model you generate:
 
    installation
    concepts
+   walkthrough
    tutorials/fsm
    tutorials/bt
    tutorials/bt_and_fsm

@@ -71,3 +71,18 @@ add_custom_command(
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/async_pick.xml)
 add_custom_target(async_pick_xml DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/async_pick.xml)
 add_dependencies(async_pick_bt async_pick_xml)
+
+# Synchronous C++ counterpart of py_pick_demo.py (same model, BT-driven).
+add_executable(py_pick_bt py_pick_main.cpp)
+target_link_libraries(py_pick_bt PRIVATE BT::behaviortree_cpp coord2b)
+target_include_directories(py_pick_bt PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${coord2b_INCLUDE_DIRS})
+target_compile_features(py_pick_bt PRIVATE cxx_std_17)
+
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/py_pick.xml
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_SOURCE_DIR}/py_pick.xml
+        ${CMAKE_CURRENT_BINARY_DIR}/py_pick.xml
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/py_pick.xml)
+add_custom_target(py_pick_xml DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/py_pick.xml)
+add_dependencies(py_pick_bt py_pick_xml)

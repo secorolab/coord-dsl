@@ -127,6 +127,8 @@ guards) drives both at once — the same node, a different composite.
    ./build/arm_handover_bt        # sequential
    ./build/dual_arm_bt            # parallel
 
+.. _btfsm-async:
+
 Running in C++ (asynchronous, 1 kHz)
 ------------------------------------
 
