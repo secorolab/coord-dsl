@@ -1,0 +1,126 @@
+ns btwp = "https://secorolab.github.io/models/coordination/bt/warehouse-pick/"
+ns ev = "https://secorolab.github.io/models/coordination/warehouse-events/"
+
+node action script { in code: string }
+node action set_blackboard { in value: string, inout output_key }
+node action sleep { in msec: double }
+node action always_success
+node action always_failure
+
+node condition battery_ok { in min_level: double }
+node action go_charge { in dock: string }
+node condition object_visible { in target: string }
+node action detect_object { in target: string, out pose: pose }
+node condition at_goal { in goal: pose, in tolerance: double }
+node action move_to { in goal: pose, in frame: string, in speed: double, in precise: bool }
+node action open_gripper
+node action close_gripper { inout width: double }
+node condition holding { in object: string }
+node action inspect { in object: string, out result: string }
+node action place { in object: string, in surface: pose }
+
+btree (ns=btwp) perceive (in target: string, out pose: pose) {
+    reactive-fallback {
+        object_visible (target: {target})
+        sequence {
+            script (code: "attempts := 1")
+            detect_object (target: {target}, pose: {pose})
+        }
+    }
+}
+
+btree (ns=btwp) navigate (in goal: pose, in estop: bool) {
+    sequence-with-memory {
+        if-then-else {
+            at_goal (goal: {goal}, tolerance: 0.05 m)
+            always_success
+            decorator retry (num_attempts: 3) [on-failure: "nav_fails := nav_fails + 1"] {
+                decorator timeout (msec: 5000 ms) {
+                    move_to (goal: {goal}, frame: "map", speed: 0.5 m/s, precise: true)
+                        [failure-if: "estop == true"] {
+                        start-event: ev.move-start
+                        end-event:   ev.move-end
+                    }
+                }
+            }
+        }
+    }
+}
+
+btree (ns=btwp) grasp (in object: string, inout width: double) {
+    sequence {
+        open_gripper
+        parallel (success_count: 1, failure_count: 1) {
+            close_gripper (width: {width})
+            decorator keep-running {
+                inspect (object: {object}, result: {grip_status})
+            }
+        }
+        holding (object: {object})
+    }
+}
+
+main btree (ns=btwp) warehouse_pick (in target_object: string, in place_pose: pose, out mission_status: string) {
+    sequence [while: "power_on == true", on-halted: "cleanup := true"] {
+        set_blackboard (value: "0", output_key: retries)
+
+        fallback {
+            battery_ok (min_level: 0.2)
+            go_charge (dock: home_dock)
+        }
+
+        decorator run-once {
+            script (code: "mission_status := 'started'")
+        }
+
+        subtree <perceive> as find (target: {target_object}, pose: {pick_pose})
+
+        subtree <navigate> (goal: {pick_pose}, estop: {estop})
+
+        decorator precondition (if: "battery > 0.1", else: FAILURE) {
+            subtree <grasp> (object: {target_object}, width: {gripper_width})
+                [on-success: "picked := true"]
+        }
+
+        reactive-sequence {
+            holding (object: {target_object}) [skip-if: "aborted == true"]
+            subtree <navigate> (goal: {place_pose}, estop: {estop})
+        }
+
+        switch (variable: {target_object}, case_1: "fragile", case_2: "heavy") {
+            decorator force-success {
+                place (object: {target_object}, surface: {place_pose})
+            }
+            place (object: {target_object}, surface: {place_pose})
+            place (object: {target_object}, surface: {place_pose})
+        }
+
+        parallel-all (max_failures: 1) {
+            open_gripper
+            script (code: "mission_status := 'done'")
+        }
+
+        while-do-else {
+            holding (object: {target_object})
+            decorator delay (delay_msec: 500 ms) {
+                open_gripper
+            }
+            decorator force-success {
+                always_failure
+            }
+        }
+
+        decorator repeat (num_cycles: 2) [post: "cycles := cycles + 1"] {
+            selector {
+                at_goal (goal: {place_pose}, tolerance: 0.1 m) [success-if: "reached == true"]
+                decorator force-failure {
+                    sleep (msec: 100 ms)
+                }
+            }
+        }
+
+        decorator loop (queue: {waypoints}, value: {wp}) {
+            move_to (goal: {wp}, frame: "map", speed: 0.3 m/s, precise: false)
+        }
+    }
+}

@@ -1,0 +1,37 @@
+// SPDX-License-Identifier: MPL-2.0
+// SPDX-FileCopyrightText: 2026 SECORO AG (secoro.uni-bremen.de)
+#ifndef {{ guard }}
+#define {{ guard }}
+
+#include <behaviortree_cpp/bt_factory.h>
+#include <filesystem>
+
+namespace {{ namespace }} {
+class {{ runtime_class }} {
+ public:
+  virtual ~{{ runtime_class }}() = default;
+{% for behaviour in behaviours %}
+  virtual BT::NodeStatus {{ behaviour.method }}(BT::TreeNode& node) = 0;
+{% endfor %}
+};
+
+inline void register_nodes(BT::BehaviorTreeFactory& factory, {{ runtime_class }}& runtime) {
+{% for behaviour in behaviours %}
+  factory.registerSimple{{ "Action" if behaviour.kind == "action" else "Condition" }}(
+      "{{ behaviour.name }}",
+      [&runtime](BT::TreeNode& node) { return runtime.{{ behaviour.method }}(node); }{% if behaviour.ports %},
+      {
+{% for port in behaviour.ports %}
+          BT::{% if port.direction == "in" %}InputPort{% elif port.direction == "out" %}OutputPort{% else %}BidirectionalPort{% endif %}("{{ port.name }}"),
+{% endfor %}
+      }{% endif %});
+{% endfor %}
+}
+
+inline BT::Tree create_tree(BT::BehaviorTreeFactory& factory,
+                            const std::filesystem::path& xml_path,
+                            BT::Blackboard::Ptr blackboard = BT::Blackboard::create()) {
+  return factory.createTreeFromFile(xml_path, blackboard);
+}
+}  // namespace {{ namespace }}
+#endif  // {{ guard }}

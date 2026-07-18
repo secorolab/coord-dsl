@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: MPL-2.0
+// SPDX-FileCopyrightText: 2026 SECORO AG (secoro.uni-bremen.de)
+// Author: Vamsi Kalagaturu
+ns arms = "https://secorolab.github.io/models/coordination/bt/dual-arm/"
+fsm left_arm = "left_arm.fsm"
+fsm right_arm = "right_arm.fsm"
+
+main btree (ns=arms) dual_arm {
+    parallel-all (max_failures: 1) [on-failure: "coordination_failed := true", on-success: "coordination_complete := true"] {
+        decorator retry (num_attempts: 3) [on-failure: "left_arm_failed := true"] {
+            send <left_arm.TAKE_POSE> await <left_arm.TAKE_POSE_DONE> [failure-if: "left_arm_fault == true"]
+        }
+        decorator retry (num_attempts: 3) [on-failure: "right_arm_failed := true"] {
+            send <right_arm.PICK> await <right_arm.PICK_DONE> [failure-if: "right_arm_fault == true"]
+        }
+    }
+}

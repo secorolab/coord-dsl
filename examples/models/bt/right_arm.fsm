@@ -1,0 +1,37 @@
+// SPDX-License-Identifier: MPL-2.0
+// SPDX-FileCopyrightText: 2026 SECORO AG (secoro.uni-bremen.de)
+// Author: Vamsi Kalagaturu
+ns right = "https://secorolab.github.io/models/coordination/fsm/right-arm/"
+
+FSM (ns=right) right_arm {
+STATES: IDLE,PICKING,PICKED,MOVING_HANDOVER,HANDOVER_POSE
+START_STATE: @IDLE
+END_STATE: @HANDOVER_POSE
+EVENTS: PICK,PICK_DONE,HANDOVER,HANDOVER_DONE
+TRANSITIONS:
+    PICK_OBJECT:
+        FROM: @IDLE
+        TO: @PICKING
+    FINISH_PICK:
+        FROM: @PICKING
+        TO: @PICKED
+    START_HANDOVER:
+        FROM: @PICKED
+        TO: @MOVING_HANDOVER
+    FINISH_HANDOVER:
+        FROM: @MOVING_HANDOVER
+        TO: @HANDOVER_POSE
+REACTIONS:
+    ON_PICK:
+        WHEN: @PICK
+        DO: @PICK_OBJECT
+    ON_PICK_DONE:
+        WHEN: @PICK_DONE
+        DO: @FINISH_PICK
+    ON_HANDOVER:
+        WHEN: @HANDOVER
+        DO: @START_HANDOVER
+    ON_HANDOVER_DONE:
+        WHEN: @HANDOVER_DONE
+        DO: @FINISH_HANDOVER
+}
