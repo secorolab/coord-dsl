@@ -58,6 +58,7 @@ From one model you generate:
    tutorials/fsm
    tutorials/bt
    tutorials/bt_and_fsm
+   pytrees_vs_btcpp
 
 .. _textX: https://textx.github.io/textX/
 .. _coord2b: https://github.com/rosym-project/coord2b
