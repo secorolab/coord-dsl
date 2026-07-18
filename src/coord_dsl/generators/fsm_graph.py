@@ -2,7 +2,7 @@ from jinja2 import Environment, FileSystemLoader
 from os.path import basename
 from pathlib import Path
 from rdflib import Graph, Namespace, Literal, RDF, URIRef
-from rdf_utils.uri import URL_SECORO_MM
+from rdf_utils.namespace import URL_SECORO_MM
 from rdf_utils.naming import get_valid_var_name
 from coord_dsl.generators.classes import FSM
 
@@ -12,10 +12,10 @@ def get_fsm_graph(model) -> tuple[Graph, dict, URIRef]:
     assert isinstance(fsm, FSM), "Model does not contain an FSM definition"
 
     URI_MM_FSM = f"{URL_SECORO_MM}/behaviour/fsm#"
-    URI_MM_EL  = f"{URL_SECORO_MM}/behaviour/event_loop#"
+    URI_MM_EL = f"{URL_SECORO_MM}/behaviour/event_loop#"
 
     NS_FSM = Namespace(URI_MM_FSM)
-    NS_EL  = Namespace(URI_MM_EL)
+    NS_EL = Namespace(URI_MM_EL)
 
     g = Graph()
     g.bind("fsm", NS_FSM)
@@ -57,8 +57,8 @@ def get_fsm_graph(model) -> tuple[Graph, dict, URIRef]:
         g.add((URIRef(reaction.uri), RDF.type, NS_FSM.Reaction))
         g.add((fsm.uri, NS_FSM.reactions, URIRef(reaction.uri)))
 
-        when  = reaction.when.uri
-        do    = reaction.do.uri
+        when = reaction.when.uri
+        do = reaction.do.uri
         fires = [f.event.uri for f in reaction.fires if f.event is not None]
 
         g.add((URIRef(reaction.uri), NS_FSM["when-event"], URIRef(when)))
@@ -68,8 +68,8 @@ def get_fsm_graph(model) -> tuple[Graph, dict, URIRef]:
 
     # jsonld context
     context = {
-        "fsm":         URI_MM_FSM,
-        "el":          URI_MM_EL,
+        "fsm": URI_MM_FSM,
+        "el": URI_MM_EL,
         fsm.ns_prefix: NS_MODEL,
     }
     return g, context, fsm.uri
@@ -81,7 +81,7 @@ def local_name(uri: str) -> str:
 
 def gen_json(g: Graph, fsm_ref: URIRef) -> dict:
     URI_MM_FSM = f"{URL_SECORO_MM}/behaviour/fsm#"
-    NS_FSM     = Namespace(URI_MM_FSM)
+    NS_FSM = Namespace(URI_MM_FSM)
 
     assert isinstance(fsm_ref, URIRef)
 
@@ -129,10 +129,10 @@ def gen_json(g: Graph, fsm_ref: URIRef) -> dict:
         to_state = get_valid_var_name(local_name(to_state_node.toPython())).upper()
         transitions_table.append(
             {
-                "id":         get_valid_var_name(local_name(uri_s)).upper(),
-                "uri":        uri_s,
+                "id": get_valid_var_name(local_name(uri_s)).upper(),
+                "uri": uri_s,
                 "from_state": from_state,
-                "to_state":   to_state,
+                "to_state": to_state,
             }
         )
 
@@ -154,26 +154,26 @@ def gen_json(g: Graph, fsm_ref: URIRef) -> dict:
             fires.append(get_valid_var_name(local_name(ev_uri.toPython())).upper())
         reactions_table.append(
             {
-                "id":            get_valid_var_name(local_name(uri_s)).upper(),
-                "uri":           uri_s,
-                "when_event":    when_event,
+                "id": get_valid_var_name(local_name(uri_s)).upper(),
+                "uri": uri_s,
+                "when_event": when_event,
                 "do_transition": do_transition,
-                "fires_events":  fires,
-                "num_fires":     len(fires),
+                "fires_events": fires,
+                "num_fires": len(fires),
             }
         )
 
     result = {
-        "name":              name,
-        "description":       description,
-        "start_state":       start_state,
-        "end_state":         end_state,
-        "states":            states,
-        "state_uris":        state_uris,
-        "events":            events,
-        "event_uris":        event_uris,
+        "name": name,
+        "description": description,
+        "start_state": start_state,
+        "end_state": end_state,
+        "states": states,
+        "state_uris": state_uris,
+        "events": events,
+        "event_uris": event_uris,
         "transitions_table": transitions_table,
-        "reactions_table":   reactions_table,
+        "reactions_table": reactions_table,
     }
 
     return result
