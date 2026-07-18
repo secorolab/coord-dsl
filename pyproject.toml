@@ -12,6 +12,12 @@ dependencies = [
     "textx_ls_core"
 ]
 
+[project.optional-dependencies]
+docs = [
+    "sphinx>=7",
+    "furo"
+]
+
 [project.urls]
 "Homepage" = "https://github.com/secorolab/coord-dsl.git"
 
