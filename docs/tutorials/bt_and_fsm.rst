@@ -103,8 +103,10 @@ runs — to ``GRASPED`` (SUCCESS) or ``FAULT`` (FAILURE via ``on-fail``).
 
 .. note::
 
-   The Python target requires guard-free trees (see :doc:`bt`); ``py_pick`` uses
-   plain composites so it generates and runs directly.
+   ``arm_handover`` and ``dual_arm`` also generate with ``--target python`` —
+   their ``[on-success]``/``[on-failure]``/``[failure-if]`` guards translate to
+   a generated ``_Guarded`` decorator over the py_trees blackboard (see
+   :doc:`bt`).
 
 Running in C++ (synchronous)
 ----------------------------

@@ -173,12 +173,14 @@ def gen_bt_python_file(metamodel, model, output_path, overwrite, debug, **kwargs
     del metamodel, overwrite, debug, kwargs
     graph, _, root_ref = get_bt_graph(model)
     name = get_valid_var_name(model.main_tree.name)
+    tree_expr = render_tree(graph, root_ref)
     rendered = _template("bt.py.jinja2").render(
         tree_name=model.main_tree.name,
         runtime_class=f"{name.title().replace('_', '')}Runtime",
         behaviours=_behaviours(model, graph),
         fsm_instances=_fsm_instances(model),
-        tree_expr=render_tree(graph, root_ref),
+        tree_expr=tree_expr,
+        has_guards="_Guarded(" in tree_expr,
     )
     output_path = output_path or _output_name(model, "py")
     with open(output_path, "w") as f:

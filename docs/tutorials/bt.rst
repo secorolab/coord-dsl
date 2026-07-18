@@ -133,15 +133,18 @@ complete one. Mappings:
      - ``Retry`` / ``Repeat`` / ``Timeout``
    * - ``send/await`` (FSM coordination)
      - a generated ``_FSMEvent`` behaviour — see :doc:`bt_and_fsm`
+   * - ``[failure-if]`` / ``[success-if]`` / ``[on-success]`` / ``[on-failure]`` / ``[post]``
+     - a generated ``_Guarded`` decorator; scripts are translated to
+       blackboard expressions at generation time
 
 .. note::
 
-   The Python target raises ``NotImplementedError`` for constructs without a
-   clean py_trees analogue: **scripted guards** (``[failure-if]``,
-   ``[on-success]`` …), ``if-then-else`` / ``while-do-else`` / ``switch``,
-   ``delay`` / ``loop`` / ``precondition``, and scripted builtins
-   (``script``, ``set_blackboard``). Use the C++/XML backend for those, or keep
-   Python trees guard-free.
+   Constructs without a clean py_trees analogue — ``[skip-if]`` / ``[while]``
+   / ``[on-halted]`` guards, ``if-then-else`` / ``while-do-else`` /
+   ``switch``, ``delay`` / ``loop`` / ``precondition``, and scripted builtins
+   — raise ``NotImplementedError`` at generation time. The supported guard
+   subset and the reasoning behind each gap are in
+   :ref:`pytrees-vs-btcpp`.
 
 Relationship to py_trees' XML parser
 ''''''''''''''''''''''''''''''''''''
@@ -159,12 +162,84 @@ convergence path, but it is not adopted here yet because:
 
 * the parser is marked experimental, and py_trees' public ports API is not in a
   stable release;
-* the custom ``FSMEvent`` node and FSM instances would need registering with the
-  parser's node registry;
-* BehaviorTree.CPP **scripted guards** have no py_trees equivalent either way.
+* the custom ``FSMEvent`` and ``_Guarded`` nodes and FSM instances would need
+  registering with the parser's node registry.
 
-Until those settle, treat the Python target as a guard-free subset; the
-C++/XML backend remains the complete one.
+Until those settle, treat the Python target as a subset; the C++/XML backend
+remains the complete one.
+
+.. _pytrees-vs-btcpp:
+
+py_trees vs BehaviorTree.CPP: the semantic gaps
+-----------------------------------------------
+
+The two engines differ in more than how the tree is delivered (run-time XML vs
+Python code). This section lists the semantic differences, which ones the
+``python`` target bridges, and which it deliberately does not.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 39 39
+
+   * -
+     - BehaviorTree.CPP v4
+     - py_trees
+   * - Node status
+     - ``SUCCESS`` / ``FAILURE`` / ``RUNNING`` / **SKIPPED** / ``IDLE``
+     - ``SUCCESS`` / ``FAILURE`` / ``RUNNING`` / ``INVALID``
+   * - Guards
+     - pre/post conditions on **every** node (``_skipIf``, ``_while``,
+       ``_onSuccess``, …) with a built-in scripting language
+     - none built in
+   * - Blackboard
+     - shared store; script variables are created on assignment, reading an
+       **unset** variable is a run-time error
+     - typed client/registry API plus a raw ``Blackboard`` store; no scripting
+   * - Halting
+     - explicit ``halt()`` with the ``_onHalted`` scripted hook
+     - invalidation via ``stop(INVALID)``; no scripted hook
+   * - Control-flow composites
+     - ``IfThenElse``, ``WhileDoElse``, ``Switch<N>``
+     - none (selectors/sequences only)
+
+Bridged by the ``python`` target
+''''''''''''''''''''''''''''''''
+
+* **Guards** — ``[failure-if]`` / ``[success-if]`` / ``[on-success]`` /
+  ``[on-failure]`` / ``[post]`` compile into a generated ``_Guarded``
+  decorator. Timing matches BT.CPP: preconditions are evaluated only when the
+  child is not ``RUNNING`` (entry/re-entry) and, when true, return their
+  status without ticking the child; completion scripts run exactly once when
+  the child returns ``SUCCESS`` or ``FAILURE``.
+* **Guard scripts** — translated to Python **at generation time** (no run-time
+  interpreter): literals, blackboard variables, comparisons, arithmetic,
+  ``&&`` / ``||``, and a single ``key := expr`` assignment for completion
+  scripts. Anything outside that subset fails the build, not the run.
+* **Unset blackboard reads** — where BT.CPP raises at run time (forcing C++
+  mains to pre-seed flags like ``left_arm_fault := false``), the generated
+  ``_bb_get`` returns ``None``, so ``flag == true`` is simply false until
+  something sets ``flag``. Same observable behaviour, no seeding required.
+
+Not bridged (and why)
+'''''''''''''''''''''
+
+* ``[skip-if]`` and ``[while]`` — both produce ``SKIPPED``, a status py_trees
+  does not have. A skipped child is *transparent* to its parent composite
+  (a sequence continues past it); mapping it onto ``SUCCESS`` or ``FAILURE``
+  would silently change the tree's semantics, so it is rejected instead.
+* ``[on-halted]`` — py_trees invalidation (``stop(INVALID)``) is not the same
+  event as a BT.CPP ``halt()`` of a running node; wiring the script to the
+  wrong one would fire it spuriously. Deferred until a use case pins the
+  semantics down.
+* ``if-then-else`` / ``while-do-else`` / ``switch`` — no py_trees composite
+  has these semantics; emulating them from selectors changes tick behaviour.
+* ``script`` / ``set_blackboard`` builtins and the full BT.CPP scripting
+  language (multiple ``;``-separated statements, string concatenation, …).
+* ``delay`` / ``loop`` / ``precondition`` decorators.
+
+All of these raise ``NotImplementedError`` at **generation** time, so an
+unsupported model never produces a silently-different Python tree — use the
+C++/XML backend for those.
 
 .. _BehaviorTree.CPP: https://www.behaviortree.dev/
 .. _py_trees: https://py-trees.readthedocs.io/

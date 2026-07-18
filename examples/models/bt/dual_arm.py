@@ -2,54 +2,42 @@
 # SPDX-FileCopyrightText: 2026 SECORO AG (secoro.uni-bremen.de)
 #
 # This is an auto-generated file. Do not edit it directly.
-# py_trees behaviour tree for: {{ tree_name }}
+# py_trees behaviour tree for: dual_arm
 import py_trees
-{% if fsm_instances %}
 from coord_dsl.event_loop import produce_event, consume_event, reconfig_event_buffers
 from coord_dsl.fsm import fsm_step
-{% for inst in fsm_instances %}
-import {{ inst.module }}
-{% endfor %}
-{% endif %}
+import left_arm
+import right_arm
 
 
-class {{ runtime_class }}:
+class DualArmRuntime:
     """Runtime contract: implement the leaf/FSM hooks, pass an instance to
     :func:`create_tree`."""
-{% if fsm_instances %}
 
     def __init__(self):
         self._fsm = {
-{% for inst in fsm_instances %}
-            '{{ inst.name }}': {{ inst.module }}.create_fsm(),
-{% endfor %}
+            'left_arm': left_arm.create_fsm(),
+            'right_arm': right_arm.create_fsm(),
         }
 
     _EVENTS = {
-{% for inst in fsm_instances %}
-        '{{ inst.name }}': {{ inst.module }}.EventID,
-{% endfor %}
+        'left_arm': left_arm.EventID,
+        'right_arm': right_arm.EventID,
     }
     _STATES = {
-{% for inst in fsm_instances %}
-        '{{ inst.name }}': {{ inst.module }}.StateID,
-{% endfor %}
+        'left_arm': left_arm.StateID,
+        'right_arm': right_arm.StateID,
     }
-{% endif %}
-{% for behaviour in behaviours %}
 
-    def {{ behaviour.method }}(self, node) -> py_trees.common.Status:
-        """Leaf behaviour '{{ behaviour.name }}'. Read node.ports; return a Status."""
-        raise NotImplementedError
-{% endfor %}
-{% for inst in fsm_instances %}
-
-    def step_{{ inst.var }}(self, fsm):
-        """Advance the {{ inst.name }} controller one tick; produce completion
+    def step_left_arm(self, fsm):
+        """Advance the left_arm controller one tick; produce completion
         events (e.g. *_DONE) once its current sub-behaviour finishes."""
         raise NotImplementedError
-{% endfor %}
-{% if fsm_instances %}
+
+    def step_right_arm(self, fsm):
+        """Advance the right_arm controller one tick; produce completion
+        events (e.g. *_DONE) once its current sub-behaviour finishes."""
+        raise NotImplementedError
 
     def fsm_of(self, instance):
         return self._fsm[instance]
@@ -62,9 +50,8 @@ class {{ runtime_class }}:
 
     def step(self, instance, fsm):
         {
-{% for inst in fsm_instances %}
-            '{{ inst.name }}': self.step_{{ inst.var }},
-{% endfor %}
+            'left_arm': self.step_left_arm,
+            'right_arm': self.step_right_arm,
         }[instance](fsm)
 
     # ---- Execution policy. Defaults drive the FSM synchronously from the tick;
@@ -85,10 +72,8 @@ class {{ runtime_class }}:
 
     def current_state(self, instance):
         return self.fsm_of(instance).current_state_index
-{% endif %}
 
 
-{% if has_guards %}
 def _bb_get(key):
     try:
         return py_trees.blackboard.Blackboard.get(key)
@@ -128,7 +113,6 @@ class _Guarded(py_trees.decorators.Decorator):
         return status
 
 
-{% endif %}
 class _Leaf(py_trees.behaviour.Behaviour):
     """A declared action/condition; delegates to a runtime ``on_*`` hook."""
 
@@ -141,7 +125,6 @@ class _Leaf(py_trees.behaviour.Behaviour):
     def update(self):
         return getattr(self._runtime, self._method)(self)
 
-{% if fsm_instances %}
 
 class _FSMEvent(py_trees.behaviour.Behaviour):
     """Dispatches a command event, then drives/polls the FSM until ``await``
@@ -180,9 +163,28 @@ class _FSMEvent(py_trees.behaviour.Behaviour):
         if is_state:
             return self._rt.current_state(self._instance) == index
         return self._rt.event_present(self._instance, index)
-{% endif %}
 
 
 def create_tree(runtime) -> py_trees.behaviour.Behaviour:
-    """Build the '{{ tree_name }}' tree bound to ``runtime`` and return its root."""
-    return {{ tree_expr | indent(4) }}
+    """Build the 'dual_arm' tree bound to ``runtime`` and return its root."""
+    return _Guarded('guarded',
+        py_trees.composites.Parallel(
+            name='parallel-all', policy=py_trees.common.ParallelPolicy.SuccessOnAll(),
+                children=[
+                    _Guarded('guarded',
+                        py_trees.decorators.Retry(name='decorator', child=_Guarded('guarded',
+                            _FSMEvent('left_arm.TAKE_POSE', runtime, 'left_arm', 'TAKE_POSE', 'TAKE_POSE_DONE', 'event'),
+                            pre=[(py_trees.common.Status.FAILURE, lambda: _bb_get('left_arm_fault') == True)],
+                            post=[]), num_failures=3),
+                        pre=[],
+                        post=[(py_trees.common.Status.FAILURE, lambda: _bb_set('left_arm_failed', True))]),
+                    _Guarded('guarded',
+                        py_trees.decorators.Retry(name='decorator', child=_Guarded('guarded',
+                            _FSMEvent('right_arm.PICK', runtime, 'right_arm', 'PICK', 'PICK_DONE', 'event'),
+                            pre=[(py_trees.common.Status.FAILURE, lambda: _bb_get('right_arm_fault') == True)],
+                            post=[]), num_failures=3),
+                        pre=[],
+                        post=[(py_trees.common.Status.FAILURE, lambda: _bb_set('right_arm_failed', True))]),
+                ],),
+        pre=[],
+        post=[(py_trees.common.Status.FAILURE, lambda: _bb_set('coordination_failed', True)), (py_trees.common.Status.SUCCESS, lambda: _bb_set('coordination_complete', True))])

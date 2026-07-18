@@ -192,11 +192,43 @@ class BtGraphTest(unittest.TestCase):
         # the generated module must be syntactically valid Python
         compile(module, "py_pick.py", "exec")
 
-    def test_pytrees_rejects_guards(self):
-        # arm_handover uses [on-success]/[on-failure] guards -> unsupported in py_trees
+    def test_pytrees_renders_guards(self):
+        # arm_handover uses [on-success]/[on-failure] guards -> _Guarded wrapper
         model = bt_metamodel().model_from_file(str(MODELS / "bt" / "arm_handover_fsms.btree"))
         with TemporaryDirectory() as directory:
-            with self.assertRaisesRegex(NotImplementedError, "guard"):
+            output = Path(directory) / "arm_handover.py"
+            gen_bt_python_file(None, model, output, False, False)
+            module = output.read_text()
+
+        self.assertIn("class _Guarded(py_trees.decorators.Decorator)", module)
+        self.assertIn(
+            "post=[(py_trees.common.Status.FAILURE, lambda: _bb_set('handover_failed', True)), "
+            "(py_trees.common.Status.SUCCESS, lambda: _bb_set('handover_complete', True))]",
+            module,
+        )
+        compile(module, "arm_handover.py", "exec")
+
+    def test_pytrees_translates_precondition_guards(self):
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "dual_arm_fsms.btree"))
+        with TemporaryDirectory() as directory:
+            output = Path(directory) / "dual_arm.py"
+            gen_bt_python_file(None, model, output, False, False)
+            module = output.read_text()
+
+        self.assertIn(
+            "pre=[(py_trees.common.Status.FAILURE, lambda: _bb_get('left_arm_fault') == True)]",
+            module,
+        )
+        compile(module, "dual_arm.py", "exec")
+
+    def test_pytrees_rejects_unmapped_guards(self):
+        # skip-if has no py_trees analogue (no SKIPPED status) -> still rejected
+        model = parse(
+            """ns n = \"https://example.test/\"\nnode action ping\nmain btree (ns=n) root { sequence { ping [skip-if: \"done == true\"] } }"""
+        )
+        model._tx_filename = str(MODELS / "bt" / "t.btree")
+        with TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(NotImplementedError, "guard 'skip-if'"):
                 gen_bt_python_file(None, model, Path(directory) / "x.py", False, False)
 
     def test_main_tree_is_an_explicit_model_field(self):
