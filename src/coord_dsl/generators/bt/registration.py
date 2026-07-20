@@ -30,12 +30,16 @@ from coord_dsl.generators.bt.classes import (
     Quantity,
     SubTreeNode,
 )
-from coord_dsl.generators.bt.graph import get_bt_graph
+from rdflib import Namespace, RDF
+
+from coord_dsl.generators.bt.graph import URI_MM_BT, get_bt_graph
 from coord_dsl.generators.dot import FORMATS, bt_dot
 from coord_dsl.generators.bt.python import render_tree
 from coord_dsl.generators.bt.xml import BUILTIN_TAG, evented_behaviours, gen_bt_xml
 from coord_dsl.generators.fsm.registration import fsm_metamodel
 
+
+NS_BT = Namespace(URI_MM_BT)
 
 GRAMMAR_PATH = str(files("coord_dsl.metamodels").joinpath("bt.tx"))
 BT_CLASSES = [
@@ -173,15 +177,49 @@ def _fsm_instances(model):
                     {"name": state.name, "enum": get_valid_var_name(state.name).upper()}
                     for state in fsm_model.fsm.states
                 ],
+                "uri": str(fsm_model.fsm.uri),
             }
         )
     return instances
 
 
+def _model_uris(graph, root_ref):
+    """Every IRI the model defines, so a running tree can name any part of itself the
+    way a generated FSM names its states and events."""
+    def walk(node, out):
+        out.append({"uri": str(node), "kind": _node_kind(graph, node)})
+        for child in sorted(graph.objects(node, NS_BT["has-child"]),
+                            key=lambda c: int(graph.value(c, NS_BT["child-index"]))):
+            walk(child, out)
+
+    trees, nodes = [], []
+    for tree in sorted(graph.subjects(RDF.type, NS_BT.BehaviourTree), key=str):
+        trees.append({"name": str(graph.value(tree, NS_BT["behaviour-tree-name"])),
+                      "uri": str(tree),
+                      "main": bool(graph.value(tree, NS_BT["is-main"]))})
+        walk(graph.value(tree, NS_BT.root), nodes)
+    trees.sort(key=lambda t: (not t["main"], t["name"]))
+    return trees, nodes
+
+
+def _node_kind(graph, node):
+    types = set(graph.objects(node, RDF.type))
+    if NS_BT.Decorator in types:
+        return str(graph.value(node, NS_BT["decorator-kind"]))
+    if NS_BT.SubTree in types:
+        return "subtree"
+    if NS_BT.FSMEvent in types:
+        return "fsm-event"
+    if NS_BT.Leaf in types:
+        return str(graph.value(graph.value(node, NS_BT["of-behaviour"]), NS_BT["behaviour-name"]))
+    return str(graph.value(node, NS_BT["node-kind"]))
+
+
 def gen_bt_cpp_file(metamodel, model, output_path, overwrite, debug, **kwargs):
     """Generate the runtime contract and BT.CPP registrations for a BT model."""
     del metamodel, overwrite, debug, kwargs
-    graph, _, _ = get_bt_graph(model)
+    graph, _, root_ref = get_bt_graph(model)
+    trees, nodes = _model_uris(graph, root_ref)
     name = get_valid_var_name(model.main_tree.name)
     rendered = _template("bt.hpp.jinja2").render(
         guard=f"{name.upper()}_BT_HPP",
@@ -189,6 +227,8 @@ def gen_bt_cpp_file(metamodel, model, output_path, overwrite, debug, **kwargs):
         runtime_class=f"{name.title().replace('_', '')}Runtime",
         behaviours=_behaviours(model, graph),
         fsm_instances=_fsm_instances(model),
+        trees=trees,
+        nodes=nodes,
     )
     output_path = output_path or _output_name(model, "hpp")
     with open(output_path, "w") as f:
@@ -201,6 +241,7 @@ def gen_bt_python_file(metamodel, model, output_path, overwrite, debug, **kwargs
     """Generate a py_trees tree + runtime contract for a BT model."""
     del metamodel, overwrite, debug, kwargs
     graph, _, root_ref = get_bt_graph(model)
+    trees, nodes = _model_uris(graph, root_ref)
     name = get_valid_var_name(model.main_tree.name)
     tree_expr = render_tree(graph, root_ref)
     rendered = _template("bt.py.jinja2").render(
@@ -208,6 +249,8 @@ def gen_bt_python_file(metamodel, model, output_path, overwrite, debug, **kwargs
         runtime_class=f"{name.title().replace('_', '')}Runtime",
         behaviours=_behaviours(model, graph),
         fsm_instances=_fsm_instances(model),
+        trees=trees,
+        nodes=nodes,
         tree_expr=tree_expr,
         has_guards="_Guarded(" in tree_expr,
     )

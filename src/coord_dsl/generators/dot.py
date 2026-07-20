@@ -77,10 +77,13 @@ def _fsm_body(g, fsm_ref, indent, entry=True, awaited=(), colour=None):
         fires = sorted(_local(e) for e in g.objects(reaction, NS_FSM["fires-events"]))
         if fires:
             label.append("fires " + ", ".join(fires))
+        # the join is kept out of the f-string: a backslash inside the expression is
+        # a syntax error before Python 3.12, which CI still builds
+        text = "\\n".join(_esc(line) for line in label)
         lines.append(
             f'{indent}"{_esc(g.value(transition, NS_FSM["transition-from"]))}"'
             f' -> "{_esc(g.value(transition, NS_FSM["transition-to"]))}"'
-            f' [label="{"\\n".join(_esc(line) for line in label)}"];'
+            f' [label="{text}"];'
         )
     for transition in sorted(g.objects(fsm_ref, NS_FSM.transitions), key=str):
         if transition not in reacted:

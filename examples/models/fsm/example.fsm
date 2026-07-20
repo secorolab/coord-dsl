@@ -22,7 +22,8 @@ fsm (ns=ex) ex_fsm {
         E-COMPILE-EXIT,
         E_EXECUTE_ENTERED,
         E_EXECUTE_EXIT,
-        e-step
+        e-step,
+        e-exit
     }
 
     start: <S_START>
@@ -36,7 +37,8 @@ fsm (ns=ex) ex_fsm {
         T_IDLE_COMPILE    { from: <S_IDLE>,      to: <S-COMPILE> },
         T_COMPILE_EXECUTE { from: <S-COMPILE>,   to: <S_EXECUTE> },
         T_EXECUTE_EXECUTE { from: <S_EXECUTE>,   to: <S_EXECUTE> },
-        T_EXECUTE_IDLE    { from: <S_EXECUTE>,   to: <S_IDLE> }
+        T_EXECUTE_IDLE    { from: <S_EXECUTE>,   to: <S_IDLE> },
+        T_IDLE_EXIT       { from: <S_IDLE>,      to: <S_EXIT> }
     }
 
     reactions {
@@ -65,6 +67,8 @@ fsm (ns=ex) ex_fsm {
             do:   <T_EXECUTE_IDLE>,
             fires { <E_IDLE_ENTERED> }
         },
+        R_E_EXIT  { when: <e-exit>, do: <T_IDLE_EXIT> },
+
         R_E_STEP1 {
             when: <e-step>,
             do:   <T_START_CONFIGURE>,

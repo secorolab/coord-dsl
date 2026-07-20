@@ -41,6 +41,12 @@ exact commands.
 | BT | `jsonld` | RDF graph — the canonical form |
 | BT | `dot` / `dot-console` | Tree drawing (dot, png, svg, pdf) |
 
+Generated code keeps the model's IRIs, so a running machine or tree can be
+joined back to its RDF graph: an FSM carries `FSM_URI` plus
+`STATE_URIS`/`EVENT_URIS`/`TRANSITION_URIS`/`REACTION_URIS`, a tree carries
+`TREE_URIS`/`NODE_URIS`/`BEHAVIOUR_URIS`/`FSM_URIS`, and each tree node reports
+its own IRI while ticking.
+
 The BT `python` target covers the coordination core, including the guard
 subset (`failure-if`/`success-if` preconditions and
 `on-success`/`on-failure`/`post` completion scripts), compiled to py_trees

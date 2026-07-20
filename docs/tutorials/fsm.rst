@@ -70,8 +70,41 @@ Generate
    textx generate example.fsm --target dot --format png     # a picture of the machine
 
 Each target emits ``create_fsm()``, ``destroy_fsm()`` (C++), the
-state/event/transition/reaction enums, and ``*_URIS`` tables. No control loop —
+state/event/transition/reaction enums, and the IRI tables below. No control loop —
 you own that.
+
+.. _fsm-iri-tables:
+
+Model IRIs in the generated code
+''''''''''''''''''''''''''''''''
+
+Every entity the model names keeps its IRI in the generated runtime, so a running
+machine can identify itself and its parts against the RDF graph — the same IRIs
+the ``graph`` target serialises:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Symbol
+     - Names
+   * - ``FSM_URI``
+     - the machine itself
+   * - ``STATE_URIS`` / ``EVENT_URIS``
+     - indexed by ``StateID`` / ``EventID``
+   * - ``TRANSITION_URIS`` / ``REACTION_URIS``
+     - indexed by ``TransitionID`` / ``ReactionID``
+
+.. code-block:: python
+
+   from ex_fsm import FSM_URI, STATE_URIS, StateID, create_fsm
+
+   fsm = create_fsm()
+   print(FSM_URI)                                   # which machine
+   print(STATE_URIS[StateID(fsm.current_state_index)])   # which state it is in
+
+The C++ header carries the same names, as ``static constexpr const char *``
+arrays indexed by the enums.
 
 Running in Python
 -----------------
@@ -111,7 +144,13 @@ Run it:
 .. code-block:: bash
 
    textx generate example.fsm --target python -o ex_fsm.py
-   python generated_fsm_bhv.py        # Ctrl+C to stop
+   python generated_fsm_bhv.py             # cycles until Ctrl+C
+   python generated_fsm_bhv.py --cycles 3  # fires e-exit, ends in S_EXIT
+
+The second form is what makes the loop above terminate: the controller produces
+``e-exit`` after three idle visits, and ``R_E_EXIT`` — which is ordered **above**
+the ``e-step`` reactions, so it wins while both events are present — takes the
+machine to its end state.
 
 Running in C++
 --------------

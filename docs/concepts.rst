@@ -96,3 +96,11 @@ tool-agnostic form; the XML and C++ backends are projections of it. For
 ``send/await`` in particular, the JSON-LD graph is the richest target — it
 records the FSM instances, the dispatched event, and the await/fail targets and
 their kinds.
+
+The graph does not stop at generation. Every entity it names keeps its **IRI in
+the generated code** — ``FSM_URI`` and the ``*_URIS`` tables for a machine,
+``TREE_URIS`` / ``NODE_URIS`` / ``BEHAVIOUR_URIS`` / ``FSM_URIS`` for a tree,
+and each tree node reports its own while ticking. So a log line, a trace or a
+runtime assertion can be joined straight back to the model it came from, rather
+than to a name that repeats. The drawings (``--target dot``) are rendered from
+that same graph, which is why a picture cannot drift from what is generated.

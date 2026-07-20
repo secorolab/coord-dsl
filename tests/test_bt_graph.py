@@ -80,9 +80,56 @@ class BtGraphTest(unittest.TestCase):
             gen_bt_cpp_file(None, model, hpp, False, False)
             gen_bt_python_file(None, model, py, False, False)
             # and each declared behaviour maps back to its own URI in both runtimes
-            self.assertIn("BEHAVIOUR_URIS", hpp.read_text())
-            self.assertIn("model_uri(const BT::TreeNode& node)", hpp.read_text())
-            self.assertIn("BEHAVIOUR_URIS: dict[str, str]", py.read_text())
+            header, module = hpp.read_text(), py.read_text()
+
+        # every IRI the model defines is compiled into the executable, as the FSM
+        # targets do with STATE_URIS/EVENT_URIS
+        for table in ("TREE_URIS", "NODE_URIS", "FSM_URIS", "BEHAVIOUR_URIS"):
+            self.assertIn(table, header)
+            self.assertIn(table, module)
+        self.assertIn("model_uri(const BT::TreeNode& node)", header)
+        self.assertIn(f'"{node}"', header)      # the node table lists every node
+        self.assertIn(f'"{node}"', module)
+
+    def _node_uris(self, source):
+        graph, _, _ = get_bt_graph(parse(source))
+        return {str(s) for s in graph.subjects(NS_BT["child-index"], None)}
+
+    def test_named_node_keeps_its_iri_when_a_sibling_is_inserted(self):
+        """An IRI is positional unless the author names the node with `as`, which is
+        what lets an annotation outlive an edit to the tree."""
+        header = ('ns n = "https://example.test/"\n'
+                  "node action ping\nnode action pong\n")
+        before = header + ("main btree (ns=n) root {\n"
+                           "  sequence { ping as keep_me, pong }\n}\n")
+        after = header + ("main btree (ns=n) root {\n"
+                          "  sequence { pong, ping as keep_me, pong }\n}\n")
+        named = "https://example.test/root-root-keep_me"
+
+        self.assertIn(named, self._node_uris(before))
+        self.assertIn(named, self._node_uris(after))          # survives the insertion
+        # the unnamed sibling does not: its IRI is its position
+        self.assertIn("https://example.test/root-root-1", self._node_uris(before))
+        self.assertNotEqual(self._node_uris(before), self._node_uris(after))
+
+    def test_rejects_siblings_sharing_an_instance_name(self):
+        source = ('ns n = "https://example.test/"\n'
+                  "node action ping\n"
+                  "main btree (ns=n) root { sequence { ping as dup, ping as dup } }\n")
+
+        with self.assertRaisesRegex(ValueError, "Duplicate instance name"):
+            get_bt_graph(parse(source))
+
+    def test_same_instance_name_under_different_parents_is_fine(self):
+        """The name only has to be unique among siblings -- the parent's IRI scopes it."""
+        source = ('ns n = "https://example.test/"\n'
+                  "node action ping\n"
+                  "main btree (ns=n) root {\n"
+                  "  sequence { sequence { ping as leaf }, sequence { ping as leaf } }\n}\n")
+        uris = self._node_uris(source)
+
+        self.assertIn("https://example.test/root-root-0-leaf", uris)
+        self.assertIn("https://example.test/root-root-1-leaf", uris)
 
     def test_generates_btcpp_header(self):
         model = bt_metamodel().model_from_file(str(MODELS / "bt" / "warehouse_pick" / "fetch_and_place.btree"))
@@ -405,10 +452,12 @@ class BtGraphTest(unittest.TestCase):
             ("guard", """ns n = \"https://example.test/\"\nnode action ping\nmain btree (ns=n) root { sequence [skip-if: \"one\", skip-if: \"two\"] { ping } }"""),
             ("binding", """ns n = \"https://example.test/\"\nnode action ping\nmain btree (ns=n) root { sequence (foo: 1, foo: 2) { ping } }"""),
             ("declaration", """ns n = \"https://example.test/\"\nnode action ping { in foo: string, out foo: string }\nmain btree (ns=n) root { ping }"""),
+            ("reserved", """ns n = \"https://example.test/\"\nnode action ping { in model_uri: string }\nmain btree (ns=n) root { ping }"""),
         )
 
         for label, source in sources:
-            with self.subTest(label=label), self.assertRaisesRegex(ValueError, "Duplicate"):
+            expected = "reserved" if label == "reserved" else "Duplicate"
+            with self.subTest(label=label), self.assertRaisesRegex(ValueError, expected):
                 get_bt_graph(parse(source))
 
     def test_dataflow_bindings_are_not_tree_concepts(self):

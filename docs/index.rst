@@ -51,6 +51,12 @@ From one model you generate:
    BehaviorTree.CPP_ (C++). Each tutorial has separate **Python** and **C++**
    sections. See :doc:`concepts` for the shared execution model.
 
+.. note::
+
+   The generated code keeps the model's **IRIs** — a running machine or tree can
+   name itself and any of its parts against the RDF graph the ``graph``/``jsonld``
+   targets serialise. See :ref:`fsm-iri-tables` and :doc:`tutorials/bt`.
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents

@@ -62,6 +62,69 @@ an ``.xml`` at run time, while py_trees builds the tree in Python code
 (``create_tree``). Both targets also emit a **runtime contract** — an abstract
 class with one hook per declared leaf.
 
+Model IRIs in the generated code
+''''''''''''''''''''''''''''''''
+
+Both runtimes carry the model's IRIs, as the FSM targets do
+(:ref:`fsm-iri-tables`), so a running tree can be joined back to the RDF graph:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 26 74
+
+   * - Symbol
+     - Names
+   * - ``TREE_URIS``
+     - every behaviour tree, main tree first
+   * - ``NODE_URIS``
+     - every node, in model order, with its kind
+   * - ``BEHAVIOUR_URIS``
+     - every declared ``action`` / ``condition``
+   * - ``FSM_URIS``
+     - the FSM each declared instance runs (joins to that FSM's ``FSM_URI``)
+
+Those tables say what *exists*. To identify the node that is **ticking** — names
+repeat, so ``holding`` alone is ambiguous — each node also carries its own IRI:
+
+.. code-block:: python
+
+   def on_holding(self, node):
+       print(node.model_uri)     # .../warehouse_pick-root-5-0
+
+.. code-block:: cpp
+
+   BT::NodeStatus on_holding(BT::TreeNode& node) override {
+     std::cout << warehouse_pick::model_uri(node);   // same IRI
+   }
+
+Naming a node makes its IRI stable
+``````````````````````````````````
+
+A node's IRI is its **position** in the tree — ``…-root-1-0`` — so inserting a
+sibling above it renumbers it and everything after it. That is fine for joining a
+run to the model that ran (an archived run carries its own source), but it means
+an IRI is not a durable key across edits.
+
+Naming a node with ``as`` makes it one: the name replaces the index, so the IRI
+survives reordering.
+
+.. code-block:: text
+
+   subtree <perceive> as find (target: {target_object})   # .../warehouse_pick-root-find
+   holding (object: {target_object})                      # .../warehouse_pick-root-5-0
+
+Names only have to be unique **among siblings** — the parent's IRI scopes them —
+and two siblings sharing one is an error, since the name is the node's identity.
+Name the nodes you intend to reference from outside the model; leave the rest
+positional.
+
+In C++ the IRI travels as a ``model_uri`` port, so it is available on generated
+leaves and ``send``/``await`` nodes; BehaviorTree.CPP's own composites and
+decorators carry none, since it rejects any attribute a node type does not
+declare. ``model_uri`` is therefore a **reserved port name** — declaring a port
+with it is an error. In Python every node carries the attribute, sub-trees
+included.
+
 Running in C++
 --------------
 

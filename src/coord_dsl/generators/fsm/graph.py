@@ -32,7 +32,7 @@ def get_fsm_graph(model) -> tuple[Graph, dict, URIRef]:
 
     g.add((fsm.uri, RDF.type, NS_FSM.FSM))
     g.add((fsm.uri, NS_FSM.name, Literal(fsm.name)))
-    if fsm.description is not None:
+    if fsm.description:
         g.add((fsm.uri, NS_FSM.description, Literal(fsm.description)))
 
     g.add((fsm.uri, NS_FSM["start-state"], URIRef(fsm.start_state.uri)))
@@ -169,6 +169,7 @@ def gen_json(g: Graph, fsm_ref: URIRef) -> dict:
 
     result = {
         "name":              name,
+        "uri":               str(fsm_ref),
         "description":       description,
         "start_state":       start_state,
         "end_state":         end_state,

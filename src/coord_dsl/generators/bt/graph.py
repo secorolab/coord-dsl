@@ -78,6 +78,9 @@ COMPOSITE_CLASS = {
     "try-catch": "TryCatch",
 }
 
+# Emitted on every generated node type to carry its model IRI to run time.
+RESERVED_PORTS = {"model_uri"}
+
 PARAMETER_DIRECTION = {
     "in": "Input",
     "out": "Output",
@@ -156,6 +159,11 @@ def get_bt_graph(model) -> tuple[Graph, dict, URIRef]:
         g.add((uri, NS_BT["behaviour-name"], Literal(b.name)))
         declared_port_names = set()
         for pd in b.ports:
+            if pd.name in RESERVED_PORTS:
+                raise ValueError(
+                    f"Port name {pd.name!r} on {uri} is reserved: the generated code "
+                    "uses it to carry the node's model IRI"
+                )
             if pd.name in declared_port_names:
                 raise ValueError(f"Duplicate port declaration {pd.name!r} on {uri}")
             declared_port_names.add(pd.name)
@@ -200,8 +208,22 @@ def get_bt_graph(model) -> tuple[Graph, dict, URIRef]:
         if getattr(node, "instance", ""):
             g.add((node_uri, NS_BT["instance-name"], Literal(node.instance)))
 
+    named_children = {}
+
     def add_child(parent_uri, index, child):
-        cu = URIRef(f"{parent_uri}-{index}")
+        # A node's IRI is its position unless the author named it with `as`. A name is
+        # therefore what makes an IRI survive editing: inserting a sibling renumbers
+        # every unnamed node after it, but a named one keeps its IRI.
+        label = getattr(child, "instance", "") or str(index)
+        if getattr(child, "instance", ""):
+            siblings = named_children.setdefault(parent_uri, set())
+            if child.instance in siblings:
+                raise ValueError(
+                    f"Duplicate instance name {child.instance!r} under {parent_uri}: "
+                    "a name is the node's identity, so siblings cannot share one"
+                )
+            siblings.add(child.instance)
+        cu = URIRef(f"{parent_uri}-{label}")
         g.add((parent_uri, NS_BT["has-child"], cu))
         g.add((cu, NS_BT["child-index"], Literal(index)))
         visit(child, cu)

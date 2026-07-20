@@ -5,8 +5,11 @@
 
 #include <behaviortree_cpp/bt_factory.h>
 #include <filesystem>
-{% if fsm_instances %}
+#include <map>
 #include <string>
+#include <utility>
+#include <vector>
+{% if fsm_instances %}
 
 #include "coord2b/functions/event_loop.h"
 #include "coord2b/functions/fsm.h"
@@ -17,8 +20,35 @@
 
 namespace {{ namespace }} {
 
-// The model each declared behaviour was generated from. A *node's* URI travels in the
-// tree XML as `model_uri`, readable at run time via `node.config().other_attributes`.
+// ---- Model IRIs, compiled in so a running tree can name any part of itself. ----
+
+/// Every behaviour tree in the model, main tree first.
+inline const std::map<std::string, std::string> TREE_URIS = {
+{% for tree in trees %}
+    {"{{ tree.name }}", "{{ tree.uri }}"},{% if tree.main %}  // main{% endif %}
+
+{% endfor %}
+};
+
+/// Every node, in model order: {kind, IRI}. A *ticking* node reports its own with
+/// model_uri(node) below; this table is the whole tree, available without one.
+inline const std::vector<std::pair<std::string, std::string>> NODE_URIS = {
+{% for node in nodes %}
+    {"{{ node.kind }}", "{{ node.uri }}"},
+{% endfor %}
+};
+{% if fsm_instances %}
+
+/// The FSM each declared instance runs. Its states and events are in that FSM's own
+/// generated header, as STATE_URIS / EVENT_URIS.
+inline const std::map<std::string, std::string> FSM_URIS = {
+{% for inst in fsm_instances %}
+    {"{{ inst.name }}", "{{ inst.uri }}"},
+{% endfor %}
+};
+{% endif %}
+
+/// The model each declared behaviour was generated from.
 inline const std::map<std::string, std::string> BEHAVIOUR_URIS = {
 {% for behaviour in behaviours %}
     {"{{ behaviour.name }}", "{{ behaviour.uri }}"},

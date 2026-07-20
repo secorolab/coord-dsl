@@ -203,7 +203,34 @@ class _FSMEvent(py_trees.behaviour.Behaviour):
 {% endif %}
 
 
-# The model each declared behaviour was generated from.
+# ---- Model IRIs, so a running tree can name any part of itself. ----
+
+#: Every behaviour tree in the model, main tree first.
+TREE_URIS: dict[str, str] = {
+{% for tree in trees %}
+    "{{ tree.name }}": "{{ tree.uri }}",{% if tree.main %}  # main{% endif %}
+
+{% endfor %}
+}
+
+#: Every node, in model order: (kind, IRI). A built node also carries its own as
+#: ``node.model_uri``; this table is the whole tree, available without one.
+NODE_URIS: list[tuple[str, str]] = [
+{% for node in nodes %}
+    ("{{ node.kind }}", "{{ node.uri }}"),
+{% endfor %}
+]
+{% if fsm_instances %}
+
+#: The FSM each declared instance runs; its states and events are in that FSM's module.
+FSM_URIS: dict[str, str] = {
+{% for inst in fsm_instances %}
+    "{{ inst.name }}": "{{ inst.uri }}",
+{% endfor %}
+}
+{% endif %}
+
+#: The model each declared behaviour was generated from.
 BEHAVIOUR_URIS: dict[str, str] = {
 {% for behaviour in behaviours %}
     "{{ behaviour.name }}": "{{ behaviour.uri }}",
