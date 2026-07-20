@@ -1,0 +1,31 @@
+ns grip = "https://secorolab.github.io/models/coordination/fsm/gripper/"
+
+fsm (ns=grip) gripper {
+    states {
+        IDLE,
+        GRASPING,
+        GRASPED,
+        FAULT
+    }
+
+    events {
+        GRASP,
+        GRASPED_OK,
+        GRASP_FAULT
+    }
+
+    start: <IDLE>
+    end:   <GRASPED>
+
+    transitions {
+        START_GRASP  { from: <IDLE>,     to: <GRASPING> },
+        FINISH_GRASP { from: <GRASPING>, to: <GRASPED> },
+        FAIL_GRASP   { from: <GRASPING>, to: <FAULT> }
+    }
+
+    reactions {
+        ON_GRASP { when: <GRASP>, do: <START_GRASP> },
+        ON_GRASPED_OK { when: <GRASPED_OK>, do: <FINISH_GRASP> },
+        ON_GRASP_FAULT { when: <GRASP_FAULT>, do: <FAIL_GRASP> }
+    }
+}

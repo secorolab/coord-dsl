@@ -1,0 +1,13 @@
+ns arms = "https://secorolab.github.io/models/coordination/bt/arm-handover/"
+
+fsm left_arm = "../fsms/left_arm.fsm"
+fsm right_arm = "../fsms/right_arm.fsm"
+
+main btree (ns=arms) arm_handover {
+    sequence [on-failure: "handover_failed := true", on-success: "handover_complete := true"] {
+        send <right_arm.PICK> await <right_arm.PICK_DONE>,
+        send <right_arm.HANDOVER> await <right_arm.HANDOVER_DONE>,
+        send <left_arm.TAKE_POSE> await <left_arm.TAKE_POSE_DONE>,
+        send <left_arm.PLACE> await <left_arm.PLACE_DONE>
+    }
+}

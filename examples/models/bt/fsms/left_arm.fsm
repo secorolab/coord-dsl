@@ -1,0 +1,35 @@
+ns left = "https://secorolab.github.io/models/coordination/fsm/left-arm/"
+
+fsm (ns=left) left_arm {
+    states {
+        IDLE,
+        MOVING_TO_TAKE_POSE,
+        AT_TAKE_POSE,
+        PLACING,
+        PLACED
+    }
+
+    events {
+        TAKE_POSE,
+        TAKE_POSE_DONE,
+        PLACE,
+        PLACE_DONE
+    }
+
+    start: <IDLE>
+    end:   <PLACED>
+
+    transitions {
+        MOVE_TAKE_POSE   { from: <IDLE>,                to: <MOVING_TO_TAKE_POSE> },
+        FINISH_TAKE_POSE { from: <MOVING_TO_TAKE_POSE>, to: <AT_TAKE_POSE> },
+        START_PLACE      { from: <AT_TAKE_POSE>,        to: <PLACING> },
+        FINISH_PLACE     { from: <PLACING>,             to: <PLACED> }
+    }
+
+    reactions {
+        ON_TAKE_POSE { when: <TAKE_POSE>, do: <MOVE_TAKE_POSE> },
+        ON_TAKE_POSE_DONE { when: <TAKE_POSE_DONE>, do: <FINISH_TAKE_POSE> },
+        ON_PLACE { when: <PLACE>, do: <START_PLACE> },
+        ON_PLACE_DONE { when: <PLACE_DONE>, do: <FINISH_PLACE> }
+    }
+}

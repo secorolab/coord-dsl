@@ -72,6 +72,9 @@ enum e_states {
     NUM_STATES
 };
 
+/// This FSM's own IRI; the tables below name its parts.
+static constexpr const char * FSM_URI = "{{ data.uri }}";
+
 static constexpr const char * STATE_URIS[NUM_STATES] = {
 {%- for state in data.states %}
     "{{ data.state_uris[state] }}",

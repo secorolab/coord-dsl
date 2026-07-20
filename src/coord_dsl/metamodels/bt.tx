@@ -1,0 +1,136 @@
+Model:
+    imports*=Import
+    namespaces*=NamespaceDeclare
+    fsms*=FSMDecl
+    ("nodes" "{" behaviours+=BehaviourDecl[","] "}" | behaviours+=BehaviourDecl)*
+    trees*=BehaviourTree
+    main_tree=MainBehaviourTree
+    trees*=BehaviourTree
+;
+
+FSMDecl:
+    "fsm" name=IRI_TRUNK "=" source=STRING
+;
+
+BehaviourDecl:
+    "node"? kind=LeafKind name=IRI_TRUNK ("{" ports*=PortDecl[","] "}")?
+;
+
+LeafKind:
+    "action" | "condition"
+;
+
+PortDecl:
+    direction=PortDir name=IRI_TRUNK (":" type=IRI_TRUNK)?
+;
+
+PortDir:
+    "inout" | "in" | "out"
+;
+
+BehaviourTree:
+    "btree" "(" "ns" "=" ns=[NamespaceDeclare|FQN] ")" name=IRI_TRUNK
+    ("(" params+=PortDecl[","] ")")? "{"
+        root=Node
+    "}"
+;
+
+MainBehaviourTree:
+    "main" "btree" "(" "ns" "=" ns=[NamespaceDeclare|FQN] ")" name=IRI_TRUNK
+    ("(" params+=PortDecl[","] ")")? "{"
+        root=Node
+    "}"
+;
+
+Tree:
+    BehaviourTree | MainBehaviourTree
+;
+
+Node:
+    CompositeNode | DecoratorNode | SubTreeNode | FSMEventNode | LeafNode
+;
+
+CompositeNode:
+    type=CompositeType ("as" instance=IRI_TRUNK)? ("(" ports+=Port[","] ")")? (guards=NodeGuards)? "{"
+        children+=Node[","]
+    "}"
+;
+
+CompositeType:
+    "sequence-with-memory" | "reactive-sequence" | "sequence" |
+    "reactive-fallback"    | "fallback"          | "selector" |
+    "parallel-all"         | "parallel"          |
+    "if-then-else"         | "while-do-else"      | "switch"    |
+    "try-catch"
+;
+
+DecoratorNode:
+    "decorator" type=IRI_TRUNK ("as" instance=IRI_TRUNK)? ("(" ports+=Port[","] ")")? (guards=NodeGuards)? "{"
+        child=Node
+    "}"
+;
+
+LeafNode:
+    behaviour=[BehaviourDecl|FQN] ("as" instance=IRI_TRUNK)? ("(" ports+=Port[","] ")")? (guards=NodeGuards)?
+    ("{"
+        (   "start-event" ":" start_event=EventName ("," "end-event" ":" end_event=EventName)?
+          | "end-event"   ":" end_event=EventName
+        )
+    "}")?
+;
+
+SubTreeNode:
+    "subtree" "<" tree=[Tree|FQN] ">" ("as" instance=IRI_TRUNK)? (autoremap?="autoremap")?
+    ("(" ports+=Port[","] ")")? (guards=NodeGuards)?
+;
+
+FSMEventNode:
+    "send" "<" fsm=[FSMDecl|IRI_TRUNK] "." event=IRI_TRUNK ">"
+    "await" "<" await_fsm=[FSMDecl|IRI_TRUNK] "." await_target=IRI_TRUNK ">"
+    ("on-fail" "<" fail_fsm=[FSMDecl|IRI_TRUNK] "." fail_target=IRI_TRUNK ">")?
+    ("as" instance=IRI_TRUNK)? ("(" ports+=Port[","] ")")? (guards=NodeGuards)?
+;
+
+NodeGuards:
+    "[" items+=NodeGuard[","] "]"
+;
+
+NodeGuard:
+    kind=GuardKind ":" script=STRING
+;
+
+GuardKind:
+    "skip-if" | "failure-if" | "success-if" | "while" |
+    "on-success" | "on-failure" | "on-halted" | "post"
+;
+
+Port:
+    name=IRI_TRUNK ":" (blackboard=BlackboardRef | quantity=Quantity | value=Scalar)
+;
+
+Quantity:
+    num=FLOAT unit=Unit
+;
+
+Unit:
+    "cm/s" | "rad/s" | "deg/s" | "m/s" | "Nm" | "ms" | "mm" | "cm" | "Hz" | "kg" |
+    "rad" | "deg" | "m" | "s" | "N" | "g"
+;
+
+Scalar:
+    STRING | FLOAT | BOOL | IRI_TRUNK
+;
+
+BlackboardRef:
+    "{" key=IRI_TRUNK "}"
+;
+
+EventName:
+    (ns=[NamespaceDeclare|IRI_TRUNK] "." event=IRI_TRUNK) | standalone=IRI_TRUNK
+;
+
+FQN: IRI_TRUNK+["."];
+Import: "import" importURI=STRING;
+Comment: /\/\/.*$/;
+NamespaceDeclare: "ns" name=IRI_TRUNK "=" uri=STRING ;
+IRI_TRUNK: /[^\d\W][\w-]*\b/;

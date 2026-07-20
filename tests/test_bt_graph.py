@@ -1,0 +1,497 @@
+# SPDX-License-Identifier: MPL-2.0
+# SPDX-FileCopyrightText: 2026 SECORO AG (secoro.uni-bremen.de)
+# Author: Vamsi Kalagaturu
+"""Regression tests for behaviour-tree RDF graph validation."""
+
+import json
+import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+
+from rdflib import Graph, Literal, Namespace, RDF, URIRef
+from rdflib.compare import isomorphic
+from textx.exceptions import TextXSyntaxError
+
+from coord_dsl.generators.bt.graph import URI_MM_BT, URI_MM_DATAFLOW, get_bt_graph
+from coord_dsl.generators.bt.python import render_tree
+from coord_dsl.generators.bt.xml import gen_bt_xml
+from coord_dsl.generators.bt.registration import (
+    bt_metamodel,
+    gen_bt_cpp_file,
+    gen_bt_graph_file,
+    gen_bt_python_file,
+    gen_bt_xml_file,
+)
+
+
+NS_BT = Namespace(URI_MM_BT)
+NS_DF = Namespace(URI_MM_DATAFLOW)
+
+
+def _repo_root() -> Path:
+    """Locate the project root by its pyproject.toml marker, like pytest's rootdir."""
+    for parent in Path(__file__).resolve().parents:
+        if (parent / "pyproject.toml").is_file():
+            return parent
+    raise RuntimeError("could not locate the coord-dsl project root")
+
+
+MODELS = _repo_root() / "examples" / "models"
+
+
+def parse(source):
+    return bt_metamodel().model_from_str(source)
+
+
+class BtGraphTest(unittest.TestCase):
+    def test_generates_jsonld_graph(self):
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "warehouse_pick" / "fetch_and_place.btree"))
+        with TemporaryDirectory() as directory:
+            output = Path(directory) / "warehouse_pick.json"
+            gen_bt_graph_file(None, model, output, False, False)
+            document = json.loads(output.read_text())
+            reparsed = Graph().parse(str(output), format="json-ld")
+
+        self.assertIn("@context", document)
+        # the serialised graph is the same one the other targets render from
+        self.assertTrue(isomorphic(reparsed, get_bt_graph(model)[0]))
+        trees = set(reparsed.subjects(RDF.type, NS_BT.BehaviourTree))
+        self.assertIn(Namespace("https://secorolab.github.io/models/coordination/bt/warehouse-pick/")
+                      .warehouse_pick, trees)
+
+    def test_model_uris_survive_into_every_target(self):
+        """A ticking node must be traceable back to the model node it came from:
+        names repeat across a tree, so only the URI identifies it."""
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "py_pick" / "py_pick.btree"))
+        graph, _, root_ref = get_bt_graph(model)
+        node = "https://secorolab.github.io/models/coordination/bt/py-pick/py_pick-root-0"
+
+        # XML: carried as a port on the node types we register. BT.CPP rejects any
+        # attribute a node type does not declare, so its own composites carry none.
+        xml = gen_bt_xml(graph, root_ref)
+        self.assertIn(f'model_uri="{node}"', xml)
+        self.assertNotIn("<Sequence model_uri", xml)
+        # py_trees: tagged onto the built behaviour
+        self.assertIn(f"_uri(_FSMEvent('right_arm.PICK'", render_tree(graph, root_ref))
+        self.assertIn(f"'{node}')", render_tree(graph, root_ref))
+
+        with TemporaryDirectory() as directory:
+            hpp, py = Path(directory) / "t.hpp", Path(directory) / "t.py"
+            gen_bt_cpp_file(None, model, hpp, False, False)
+            gen_bt_python_file(None, model, py, False, False)
+            # and each declared behaviour maps back to its own URI in both runtimes
+            header, module = hpp.read_text(), py.read_text()
+
+        # every IRI the model defines is compiled into the executable, as the FSM
+        # targets do with STATE_URIS/EVENT_URIS
+        for table in ("TREE_URIS", "NODE_URIS", "FSM_URIS", "BEHAVIOUR_URIS"):
+            self.assertIn(table, header)
+            self.assertIn(table, module)
+        self.assertIn("model_uri(const BT::TreeNode& node)", header)
+        self.assertIn(f'"{node}"', header)      # the node table lists every node
+        self.assertIn(f'"{node}"', module)
+
+    def _node_uris(self, source):
+        graph, _, _ = get_bt_graph(parse(source))
+        return {str(s) for s in graph.subjects(NS_BT["child-index"], None)}
+
+    def test_named_node_keeps_its_iri_when_a_sibling_is_inserted(self):
+        """An IRI is positional unless the author names the node with `as`, which is
+        what lets an annotation outlive an edit to the tree."""
+        header = ('ns n = "https://example.test/"\n'
+                  "node action ping\nnode action pong\n")
+        before = header + ("main btree (ns=n) root {\n"
+                           "  sequence { ping as keep_me, pong }\n}\n")
+        after = header + ("main btree (ns=n) root {\n"
+                          "  sequence { pong, ping as keep_me, pong }\n}\n")
+        named = "https://example.test/root-root-keep_me"
+
+        self.assertIn(named, self._node_uris(before))
+        self.assertIn(named, self._node_uris(after))          # survives the insertion
+        # the unnamed sibling does not: its IRI is its position
+        self.assertIn("https://example.test/root-root-1", self._node_uris(before))
+        self.assertNotEqual(self._node_uris(before), self._node_uris(after))
+
+    def test_rejects_siblings_sharing_an_instance_name(self):
+        source = ('ns n = "https://example.test/"\n'
+                  "node action ping\n"
+                  "main btree (ns=n) root { sequence { ping as dup, ping as dup } }\n")
+
+        with self.assertRaisesRegex(ValueError, "Duplicate instance name"):
+            get_bt_graph(parse(source))
+
+    def test_same_instance_name_under_different_parents_is_fine(self):
+        """The name only has to be unique among siblings -- the parent's IRI scopes it."""
+        source = ('ns n = "https://example.test/"\n'
+                  "node action ping\n"
+                  "main btree (ns=n) root {\n"
+                  "  sequence { sequence { ping as leaf }, sequence { ping as leaf } }\n}\n")
+        uris = self._node_uris(source)
+
+        self.assertIn("https://example.test/root-root-0-leaf", uris)
+        self.assertIn("https://example.test/root-root-1-leaf", uris)
+
+    def test_generates_btcpp_header(self):
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "warehouse_pick" / "fetch_and_place.btree"))
+        with TemporaryDirectory() as directory:
+            output = Path(directory) / "warehouse_pick.hpp"
+            gen_bt_cpp_file(None, model, output, False, False)
+            header = output.read_text()
+
+        self.assertIn("class WarehousePickRuntime", header)
+        self.assertIn("virtual BT::NodeStatus on_battery_ok(BT::TreeNode& node) = 0;", header)
+        self.assertIn('registerSimpleCondition(\n      "battery_ok"', header)
+        self.assertIn("return runtime.on_battery_ok(node);", header)
+        self.assertIn('BT::InputPort("min_level")', header)
+        self.assertIn('BT::InputPort("start_event")', header)
+        self.assertIn("createTreeFromFile", header)
+        self.assertNotIn("<BehaviorTree", header)
+
+    def test_loop_uses_btcpp_string_loop(self):
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "warehouse_pick" / "fetch_and_place.btree"))
+        with TemporaryDirectory() as directory:
+            output = Path(directory) / "warehouse_pick.xml"
+            gen_bt_xml_file(None, model, output, False, False)
+            xml = output.read_text()
+
+        self.assertIn("<LoopString", xml)
+
+    def test_declared_fsm_instances_are_included_in_jsonld(self):
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "dual_arm" / "dual_arm_fsms.btree"))
+
+        graph, _, _ = get_bt_graph(model)
+        fsm_instances = set(graph.subjects(RDF.type, NS_BT.FSMInstance))
+
+        self.assertEqual(
+            {str(graph.value(node, NS_BT["of-fsm"])) for node in fsm_instances},
+            {
+                "https://secorolab.github.io/models/coordination/fsm/left-arm/left_arm",
+                "https://secorolab.github.io/models/coordination/fsm/right-arm/right_arm",
+            },
+        )
+        self.assertIn(
+            (
+                URIRef("https://secorolab.github.io/models/coordination/fsm/left-arm/left_arm"),
+                RDF.type,
+                Namespace("https://secorolab.github.io/metamodels/behaviour/fsm#").FSM,
+            ),
+            graph,
+        )
+        self.assertEqual(
+            {str(script) for script in graph.objects(None, NS_BT["guard-script"])},
+            {
+                "coordination_complete := true",
+                "coordination_failed := true",
+                "left_arm_failed := true",
+                "left_arm_fault == true",
+                "right_arm_failed := true",
+                "right_arm_fault == true",
+            },
+        )
+
+    def test_handover_coordinates_fsm_phases(self):
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "arm_handover" / "arm_handover_fsms.btree"))
+        sequence = model.main_tree.root
+        self.assertTrue(all(node.fsm is node.await_fsm for node in sequence.children))
+
+        graph, _, _ = get_bt_graph(model)
+        fsm_instances = set(graph.subjects(RDF.type, NS_BT.FSMInstance))
+        self.assertEqual(len(fsm_instances), 2)
+        self.assertEqual(
+            {str(graph.value(node, NS_BT["instance-name"])) for node in fsm_instances},
+            {"right_arm", "left_arm"},
+        )
+        event_nodes = set(graph.subjects(RDF.type, NS_BT.FSMEvent))
+        self.assertEqual(
+            {graph.value(node, NS_BT["on-fsm-instance"]) for node in event_nodes},
+            fsm_instances,
+        )
+        self.assertEqual(
+            {str(graph.value(node, NS_BT["of-event"])) for node in event_nodes},
+            {
+                "https://secorolab.github.io/models/coordination/fsm/right-arm/PICK",
+                "https://secorolab.github.io/models/coordination/fsm/right-arm/HANDOVER",
+                "https://secorolab.github.io/models/coordination/fsm/left-arm/TAKE_POSE",
+                "https://secorolab.github.io/models/coordination/fsm/left-arm/PLACE",
+            },
+        )
+        self.assertEqual(
+            {str(graph.value(node, NS_BT["await-target"])) for node in event_nodes},
+            {
+                "https://secorolab.github.io/models/coordination/fsm/right-arm/PICK_DONE",
+                "https://secorolab.github.io/models/coordination/fsm/right-arm/HANDOVER_DONE",
+                "https://secorolab.github.io/models/coordination/fsm/left-arm/TAKE_POSE_DONE",
+                "https://secorolab.github.io/models/coordination/fsm/left-arm/PLACE_DONE",
+            },
+        )
+        self.assertEqual(
+            {str(graph.value(node, NS_BT["await-kind"])) for node in event_nodes}, {"event"}
+        )
+
+    def test_fsm_events_render_to_xml_and_cpp(self):
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "arm_handover" / "arm_handover_fsms.btree"))
+        with TemporaryDirectory() as directory:
+            xml_out = Path(directory) / "arm_handover.xml"
+            hpp_out = Path(directory) / "arm_handover.hpp"
+            gen_bt_xml_file(None, model, xml_out, False, False)
+            gen_bt_cpp_file(None, model, hpp_out, False, False)
+            xml = xml_out.read_text()
+            header = hpp_out.read_text()
+
+        self.assertIn('<FSMEvent fsm="right_arm" event="PICK" await="PICK_DONE" await_kind="event"', xml)
+        self.assertIn('#include "left_arm.hpp"', header)
+        self.assertIn("class FSMEventNode : public BT::StatefulActionNode", header)
+        self.assertIn("virtual void step_left_arm(struct fsm_nbx* fsm) = 0;", header)
+        self.assertIn("if (event == \"PICK\") return right_arm::PICK;", header)
+        self.assertIn("if (state == \"PICKED\") return right_arm::PICKED;", header)
+        self.assertIn('factory.registerNodeType<FSMEventNode>("FSMEvent", &runtime);', header)
+
+    def test_await_state_and_on_fail_render(self):
+        source = (
+            'ns n = "https://example.test/"\n'
+            'fsm arm = "fsms/left_arm.fsm"\n'
+            "main btree (ns=n) t {\n"
+            "  send <arm.TAKE_POSE> await <arm.AT_TAKE_POSE> on-fail <arm.PLACED>\n"
+            "}\n"
+        )
+        model = bt_metamodel().model_from_str(source)
+        model._tx_filename = str(MODELS / "bt" / "t.btree")
+        with TemporaryDirectory() as directory:
+            xml_out = Path(directory) / "t.xml"
+            hpp_out = Path(directory) / "t.hpp"
+            gen_bt_xml_file(None, model, xml_out, False, False)
+            gen_bt_cpp_file(None, model, hpp_out, False, False)
+            xml = xml_out.read_text()
+
+        self.assertIn('await="AT_TAKE_POSE"', xml)
+        self.assertIn('await_kind="state"', xml)
+        self.assertIn('on_fail="PLACED"', xml)
+        self.assertIn('on_fail_kind="state"', xml)
+
+    def test_fsm_events_render_to_pytrees(self):
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "py_pick" / "py_pick.btree"))
+        with TemporaryDirectory() as directory:
+            output = Path(directory) / "py_pick.py"
+            gen_bt_python_file(None, model, output, False, False)
+            module = output.read_text()
+
+        self.assertIn("import right_arm", module)
+        self.assertIn("class PyPickRuntime", module)
+        self.assertIn("class _FSMEvent(py_trees.behaviour.Behaviour)", module)
+        self.assertIn("def step_right_arm(self, fsm):", module)
+        self.assertIn("py_trees.composites.Sequence(", module)
+        self.assertIn("_FSMEvent('right_arm.PICK', runtime, 'right_arm', 'PICK', 'PICKED', 'state')", module)
+        self.assertIn("on_fail='FAULT', on_fail_kind='state'", module)
+        # the generated module must be syntactically valid Python
+        compile(module, "py_pick.py", "exec")
+
+    def test_pytrees_renders_guards(self):
+        # arm_handover uses [on-success]/[on-failure] guards -> _Guarded wrapper
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "arm_handover" / "arm_handover_fsms.btree"))
+        with TemporaryDirectory() as directory:
+            output = Path(directory) / "arm_handover.py"
+            gen_bt_python_file(None, model, output, False, False)
+            module = output.read_text()
+
+        self.assertIn("class _Guarded(py_trees.decorators.Decorator)", module)
+        self.assertIn(
+            "post=[(py_trees.common.Status.FAILURE, lambda: _bb_set('handover_failed', True)), "
+            "(py_trees.common.Status.SUCCESS, lambda: _bb_set('handover_complete', True))]",
+            module,
+        )
+        compile(module, "arm_handover.py", "exec")
+
+    def test_pytrees_translates_precondition_guards(self):
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "dual_arm" / "dual_arm_fsms.btree"))
+        with TemporaryDirectory() as directory:
+            output = Path(directory) / "dual_arm.py"
+            gen_bt_python_file(None, model, output, False, False)
+            module = output.read_text()
+
+        self.assertIn(
+            "pre=[(py_trees.common.Status.FAILURE, lambda: _bb_get('left_arm_fault') == True)]",
+            module,
+        )
+        compile(module, "dual_arm.py", "exec")
+
+    def test_pytrees_rejects_unmapped_guards(self):
+        # skip-if has no py_trees analogue (no SKIPPED status) -> still rejected
+        model = parse(
+            """ns n = \"https://example.test/\"\nnode action ping\nmain btree (ns=n) root { sequence { ping [skip-if: \"done == true\"] } }"""
+        )
+        model._tx_filename = str(MODELS / "bt" / "t.btree")
+        with TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(NotImplementedError, "guard 'skip-if'"):
+                gen_bt_python_file(None, model, Path(directory) / "x.py", False, False)
+
+    def test_main_tree_is_an_explicit_model_field(self):
+        model = parse(
+            """ns n = \"https://example.test/\"\nnode action ping\nmain btree (ns=n) root { ping }\nbtree (ns=n) child { subtree <root> }"""
+        )
+
+        self.assertEqual(model.main_tree.name, "root")
+        self.assertIs(model.trees[0].root.tree, model.main_tree)
+
+    def test_requires_exactly_one_main_tree(self):
+        sources = (
+            """ns n = \"https://example.test/\"\nnode action ping\nbtree (ns=n) alpha { ping }""",
+            """ns n = \"https://example.test/\"\nnode action ping\nmain btree (ns=n) alpha { ping }\nmain btree (ns=n) beta { ping }""",
+        )
+
+        for source in sources:
+            with self.subTest(source=source), self.assertRaises(TextXSyntaxError):
+                parse(source)
+
+    def test_tree_uris_follow_tree_identity_not_name(self):
+        model = parse(
+            """ns a = \"https://a.test/\"\nns b = \"https://b.test/\"\nnode action ping\nmain btree (ns=a) same { ping }\nbtree (ns=b) same { ping }"""
+        )
+
+        graph, _, main = get_bt_graph(model)
+        trees = set(graph.subjects(RDF.type, NS_BT.BehaviourTree))
+
+        self.assertEqual(main, Namespace("https://a.test/").same)
+        self.assertEqual(trees, {Namespace("https://a.test/").same, Namespace("https://b.test/").same})
+
+    def test_grouped_and_single_node_declarations_are_equivalent(self):
+        header = 'ns n = "https://example.test/"\n'
+        tree = 'main btree (ns=n) root { sequence { ping(message: "hi"), ok(level: 0.5) } }'
+        single = header + 'node action ping { in message: string }\nnode condition ok { in level: double }\n' + tree
+        grouped = header + 'nodes {\n action ping { in message: string },\n condition ok { in level: double }\n}\n' + tree
+
+        def shape(model):
+            return [(b.kind, b.name, [(p.direction, p.name, p.type) for p in b.ports])
+                    for b in model.behaviours]
+
+        self.assertEqual(shape(parse(single)), shape(parse(grouped)))
+        self.assertTrue(isomorphic(get_bt_graph(parse(single))[0], get_bt_graph(parse(grouped))[0]))
+
+    def test_subtree_ports_remap_and_private_keys_are_namespaced(self):
+        model = parse(
+            'ns n = "https://example.test/"\n'
+            'node condition seen { in target: string }\n'
+            'node action detect { in target: string, out pose: pose }\n'
+            'btree (ns=n) perceive (in target: string, out pose: pose) {\n'
+            '  reactive-fallback {\n'
+            '    seen (target: {target}),\n'
+            '    detect (target: {target}, pose: {pose}) [on-success: "attempts := 1"]\n'
+            '  }\n'
+            '}\n'
+            'main btree (ns=n) root {\n'
+            '  sequence {\n'
+            '    subtree <perceive> as find (target: {object_name}, pose: {pick_pose}),\n'
+            '    subtree <perceive> as find2 (target: "fixed", pose: {other_pose})\n'
+            '  }\n'
+            '}\n'
+        )
+        graph, _, root_ref = get_bt_graph(model)
+        tree = render_tree(graph, root_ref)
+
+        # bound parameters take the caller's key, a literal argument is inlined
+        self.assertIn("{'target': _Key('object_name'), 'pose': _Key('pick_pose')}", tree)
+        self.assertIn("{'target': 'fixed', 'pose': _Key('other_pose')}", tree)
+        # a key the caller did not bind stays private to each instance
+        self.assertIn("_bb_set('find/attempts', 1)", tree)
+        self.assertIn("_bb_set('find2/attempts', 1)", tree)
+        self.assertNotIn("_bb_set('attempts'", tree)
+
+    def test_autoremap_subtree_shares_the_caller_keys(self):
+        model = parse(
+            'ns n = "https://example.test/"\n'
+            'node action probe { in target: string }\n'
+            'btree (ns=n) inner { probe (target: {goal}) [on-success: "seen := true"] }\n'
+            'main btree (ns=n) root {\n'
+            '  sequence { subtree <inner> as shared autoremap, subtree <inner> as private }\n'
+            '}\n'
+        )
+        graph, _, root_ref = get_bt_graph(model)
+
+        self.assertIn('_autoremap="true"', gen_bt_xml(graph, root_ref))
+        tree = render_tree(graph, root_ref)
+        self.assertIn("{'target': _Key('goal')}", tree)              # autoremapped
+        self.assertIn("_bb_set('seen', True)", tree)
+        self.assertIn("{'target': _Key('private/goal')}", tree)      # private by default
+        self.assertIn("_bb_set('private/seen', True)", tree)
+
+    def test_try_catch_generates_btcpp_and_is_rejected_for_pytrees(self):
+        model = parse(
+            'ns n = "https://example.test/"\n'
+            'nodes { action work, action cleanup }\n'
+            'main btree (ns=n) root { try-catch { work, cleanup } }\n'
+        )
+        graph, _, root_ref = get_bt_graph(model)
+
+        self.assertIn("<TryCatch>", gen_bt_xml(graph, root_ref))
+        with self.assertRaisesRegex(NotImplementedError, "try-catch"):
+            render_tree(graph, root_ref)
+
+    def test_rejects_recursive_subtree(self):
+        model = parse(
+            'ns n = "https://example.test/"\n'
+            'node action ping\n'
+            'btree (ns=n) loop { sequence { ping, subtree <loop> } }\n'
+            'main btree (ns=n) root { subtree <loop> }\n'
+        )
+        graph, _, root_ref = get_bt_graph(model)
+
+        with self.assertRaisesRegex(NotImplementedError, "recursive"):
+            render_tree(graph, root_ref)
+
+    def test_blackboard_bound_port_is_not_silently_dropped(self):
+        model = parse(
+            'ns n = "https://example.test/"\n'
+            'node action ping { in message: string }\n'
+            'main btree (ns=n) root { ping (message: {shared}) }\n'
+        )
+        graph, _, root_ref = get_bt_graph(model)
+
+        self.assertIn("{'message': _Key('shared')}", render_tree(graph, root_ref))
+
+    def test_rejects_duplicate_guards_and_ports(self):
+        sources = (
+            ("guard", """ns n = \"https://example.test/\"\nnode action ping\nmain btree (ns=n) root { sequence [skip-if: \"one\", skip-if: \"two\"] { ping } }"""),
+            ("binding", """ns n = \"https://example.test/\"\nnode action ping\nmain btree (ns=n) root { sequence (foo: 1, foo: 2) { ping } }"""),
+            ("declaration", """ns n = \"https://example.test/\"\nnode action ping { in foo: string, out foo: string }\nmain btree (ns=n) root { ping }"""),
+            ("reserved", """ns n = \"https://example.test/\"\nnode action ping { in model_uri: string }\nmain btree (ns=n) root { ping }"""),
+        )
+
+        for label, source in sources:
+            expected = "reserved" if label == "reserved" else "Duplicate"
+            with self.subTest(label=label), self.assertRaisesRegex(ValueError, expected):
+                get_bt_graph(parse(source))
+
+    def test_dataflow_bindings_are_not_tree_concepts(self):
+        model = parse(
+            'ns n = "https://example.test/"\n'
+            'node action ping { in message: string }\n'
+            'main btree (ns=n) root { sequence { ping(message: "fixed"), ping(message: {shared}) } }'
+        )
+
+        graph, _, _ = get_bt_graph(model)
+        behaviour = Namespace("https://example.test/")["behaviour-ping"]
+        parameter = graph.value(behaviour, NS_DF["has-parameter"])
+        arguments = set(graph.objects(None, NS_DF["has-argument"]))
+
+        self.assertIn((parameter, RDF.type, NS_DF.Parameter), graph)
+        self.assertEqual(graph.value(parameter, NS_DF.name), Literal("message"))
+        self.assertEqual(graph.value(parameter, NS_DF.direction), NS_DF.Input)
+        self.assertEqual({graph.value(argument, RDF.value) for argument in arguments}, {Literal("fixed"), None})
+        reference = next(
+            graph.value(argument, NS_DF.references)
+            for argument in arguments
+            if graph.value(argument, NS_DF.references)
+        )
+        self.assertEqual(graph.value(reference, RDF.type), NS_DF.DataReference)
+        self.assertEqual(graph.value(reference, NS_DF.name), Literal("shared"))
+        self.assertFalse(
+            {
+                NS_BT["has-port"],
+                NS_BT["port"],
+                NS_BT["port-name"],
+                NS_BT["port-direction"],
+                NS_BT["port-type"],
+                NS_BT["port-value"],
+                NS_BT["blackboard-key"],
+            }
+            & set(graph.predicates())
+        )

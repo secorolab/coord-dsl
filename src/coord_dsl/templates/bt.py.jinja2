@@ -1,0 +1,251 @@
+# SPDX-License-Identifier: MPL-2.0
+# SPDX-FileCopyrightText: 2026 SECORO AG (secoro.uni-bremen.de)
+#
+# This is an auto-generated file. Do not edit it directly.
+# py_trees behaviour tree for: {{ tree_name }}
+import py_trees
+{% if fsm_instances %}
+from coord_dsl.event_loop import produce_event, consume_event, reconfig_event_buffers
+from coord_dsl.fsm import fsm_step
+{% for inst in fsm_instances %}
+import {{ inst.module }}
+{% endfor %}
+{% endif %}
+
+
+class {{ runtime_class }}:
+    """Runtime contract: implement the leaf/FSM hooks, pass an instance to
+    :func:`create_tree`."""
+{% if fsm_instances %}
+
+    def __init__(self):
+        self._fsm = {
+{% for inst in fsm_instances %}
+            '{{ inst.name }}': {{ inst.module }}.create_fsm(),
+{% endfor %}
+        }
+
+    _EVENTS = {
+{% for inst in fsm_instances %}
+        '{{ inst.name }}': {{ inst.module }}.EventID,
+{% endfor %}
+    }
+    _STATES = {
+{% for inst in fsm_instances %}
+        '{{ inst.name }}': {{ inst.module }}.StateID,
+{% endfor %}
+    }
+{% endif %}
+{% for behaviour in behaviours %}
+
+    def {{ behaviour.method }}(self, node) -> py_trees.common.Status:
+        """Leaf behaviour '{{ behaviour.name }}'. Read node.ports; return a Status."""
+        raise NotImplementedError
+{% endfor %}
+{% for inst in fsm_instances %}
+
+    def step_{{ inst.var }}(self, fsm):
+        """Advance the {{ inst.name }} controller one tick; produce completion
+        events (e.g. *_DONE) once its current sub-behaviour finishes."""
+        raise NotImplementedError
+{% endfor %}
+{% if fsm_instances %}
+
+    def fsm_of(self, instance):
+        return self._fsm[instance]
+
+    def event_index(self, instance, event):
+        return int(self._EVENTS[instance][event])
+
+    def state_index(self, instance, state):
+        return int(self._STATES[instance][state])
+
+    def step(self, instance, fsm):
+        {
+{% for inst in fsm_instances %}
+            '{{ inst.name }}': self.step_{{ inst.var }},
+{% endfor %}
+        }[instance](fsm)
+
+    # ---- Execution policy. Defaults drive the FSM synchronously from the tick;
+    # override for a self-driving controller (e.g. a real-time thread), making
+    # dispatch()/current_state() thread-safe and advance() a no-op. ----
+
+    def dispatch(self, instance, event):
+        produce_event(self.fsm_of(instance).event_data, event)
+
+    def advance(self, instance):
+        fsm = self.fsm_of(instance)
+        self.step(instance, fsm)
+        reconfig_event_buffers(fsm.event_data)
+        fsm_step(fsm)
+
+    def event_present(self, instance, event):
+        return consume_event(self.fsm_of(instance).event_data, event)
+
+    def current_state(self, instance):
+        return self.fsm_of(instance).current_state_index
+{% endif %}
+
+
+{% if has_guards %}
+def _bb_get(key):
+    try:
+        return py_trees.blackboard.Blackboard.get(key)
+    except KeyError:
+        return None
+
+
+_bb_set = py_trees.blackboard.Blackboard.set
+
+
+class _Guarded(py_trees.decorators.Decorator):
+    """BT.CPP-style guards. ``pre``: (status, condition) pairs checked before
+    the child (re)enters -- a true condition returns the status without
+    ticking the child. ``post``: (status, script) pairs run when the child
+    completes with that status (``None`` matches any completion)."""
+
+    def __init__(self, name, child, pre, post):
+        super().__init__(name=name, child=child)
+        self._pre = pre
+        self._post = post
+
+    def tick(self):
+        if self.decorated.status != py_trees.common.Status.RUNNING:
+            for status, condition in self._pre:
+                if condition():
+                    self.stop(status)
+                    yield self
+                    return
+        yield from super().tick()
+
+    def update(self):
+        status = self.decorated.status
+        if status != py_trees.common.Status.RUNNING:
+            for wanted, script in self._post:
+                if wanted is None or wanted == status:
+                    script()
+        return status
+
+
+{% endif %}
+class _Key:
+    """A port bound to a blackboard key, read/written when the leaf ticks."""
+
+    def __init__(self, key):
+        self.key = key
+
+
+class _Leaf(py_trees.behaviour.Behaviour):
+    """A declared action/condition; delegates to a runtime ``on_*`` hook."""
+
+    def __init__(self, name, runtime, method, ports):
+        super().__init__(name=name)
+        self._runtime = runtime
+        self._method = method
+        self._ports = ports
+
+    @property
+    def ports(self):
+        """Port values, with blackboard-bound ones read at access time."""
+        return {name: _bb_get(value.key) if isinstance(value, _Key) else value
+                for name, value in self._ports.items()}
+
+    def set_port(self, name, value):
+        """Write an ``out``/``inout`` port back to the blackboard."""
+        port = self._ports.get(name)
+        if not isinstance(port, _Key):
+            raise KeyError(f"port {name!r} is not bound to a blackboard key")
+        _bb_set(port.key, value)
+
+    def update(self):
+        return getattr(self._runtime, self._method)(self)
+
+{% if fsm_instances %}
+
+class _FSMEvent(py_trees.behaviour.Behaviour):
+    """Dispatches a command event, then drives/polls the FSM until ``await``
+    (an event, edge-triggered, or a state, level-triggered); optional
+    ``on_fail`` maps a fault target to FAILURE."""
+
+    def __init__(self, name, runtime, instance, event, await_name, await_kind,
+                 on_fail=None, on_fail_kind=None):
+        super().__init__(name=name)
+        self._rt = runtime
+        self._instance = instance
+        self._event = event
+        self._await_name = await_name
+        self._await_state = await_kind == "state"
+        self._fail_name = on_fail
+        self._fail_state = on_fail_kind == "state"
+
+    def initialise(self):
+        self._command = self._rt.event_index(self._instance, self._event)
+        self._await = self._resolve(self._await_name, self._await_state)
+        self._fail = self._resolve(self._fail_name, self._fail_state) if self._fail_name else None
+        self._rt.dispatch(self._instance, self._command)
+
+    def update(self):
+        self._rt.advance(self._instance)
+        if self._fail is not None and self._reached(self._fail, self._fail_state):
+            return py_trees.common.Status.FAILURE
+        if self._reached(self._await, self._await_state):
+            return py_trees.common.Status.SUCCESS
+        return py_trees.common.Status.RUNNING
+
+    def _resolve(self, name, is_state):
+        return (self._rt.state_index if is_state else self._rt.event_index)(self._instance, name)
+
+    def _reached(self, index, is_state):
+        if is_state:
+            return self._rt.current_state(self._instance) == index
+        return self._rt.event_present(self._instance, index)
+{% endif %}
+
+
+# ---- Model IRIs, so a running tree can name any part of itself. ----
+
+#: Every behaviour tree in the model, main tree first.
+TREE_URIS: dict[str, str] = {
+{% for tree in trees %}
+    "{{ tree.name }}": "{{ tree.uri }}",{% if tree.main %}  # main{% endif %}
+
+{% endfor %}
+}
+
+#: Every node, in model order: (kind, IRI). A built node also carries its own as
+#: ``node.model_uri``; this table is the whole tree, available without one.
+NODE_URIS: list[tuple[str, str]] = [
+{% for node in nodes %}
+    ("{{ node.kind }}", "{{ node.uri }}"),
+{% endfor %}
+]
+{% if fsm_instances %}
+
+#: The FSM each declared instance runs; its states and events are in that FSM's module.
+FSM_URIS: dict[str, str] = {
+{% for inst in fsm_instances %}
+    "{{ inst.name }}": "{{ inst.uri }}",
+{% endfor %}
+}
+{% endif %}
+
+#: The model each declared behaviour was generated from.
+BEHAVIOUR_URIS: dict[str, str] = {
+{% for behaviour in behaviours %}
+    "{{ behaviour.name }}": "{{ behaviour.uri }}",
+{% endfor %}
+}
+
+
+def _uri(node, uri):
+    """Tag a node with the URI of the model node it was generated from, so a running
+    tree can be traced back to the model (names alone are ambiguous -- one behaviour
+    is used at many places in a tree)."""
+    node.model_uri = uri
+    return node
+
+
+def create_tree(runtime) -> py_trees.behaviour.Behaviour:
+    """Build the '{{ tree_name }}' tree bound to ``runtime`` and return its root."""
+    return {{ tree_expr | indent(4) }}

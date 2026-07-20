@@ -1,0 +1,11 @@
+ns ap = "https://secorolab.github.io/models/coordination/bt/async-pick/"
+
+fsm right_arm = "../fsms/right_arm.fsm"
+fsm gripper = "../fsms/gripper.fsm"
+
+main btree (ns=ap) async_pick {
+    sequence [on-success: "pick_complete := true", on-failure: "pick_failed := true"] {
+        send <right_arm.PICK> await <right_arm.PICKED>,
+        send <gripper.GRASP> await <gripper.GRASPED> on-fail <gripper.FAULT>
+    }
+}
