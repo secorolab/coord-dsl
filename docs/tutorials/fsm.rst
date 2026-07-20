@@ -71,7 +71,8 @@ Generate
 
 Each target emits ``create_fsm()``, ``destroy_fsm()`` (C++), the
 state/event/transition/reaction enums, and the IRI tables below. No control loop —
-you own that.
+you own that. Each also writes a ``provenance.jsonld`` beside the artifact,
+recording what produced it (see :doc:`../concepts`).
 
 .. _fsm-iri-tables:
 

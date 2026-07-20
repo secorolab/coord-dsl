@@ -41,25 +41,16 @@ exact commands.
 | BT | `jsonld` | RDF graph — the canonical form |
 | BT | `dot` / `dot-console` | Tree drawing (dot, png, svg, pdf) |
 
-Every generator also writes a PROV-O `provenance.jsonld` beside its output,
-recording the source models, the artifact and the tool that produced it.
+Alongside each artifact a generator writes a PROV-O `provenance.jsonld`
+recording the source models, the artifact and the tool. Generated code also
+carries the model's IRIs, so a running machine or tree can be joined back to its
+graph — see
+[Concepts](https://secorolab.github.io/coord-dsl/concepts.html).
 
-Generated code keeps the model's IRIs, so a running machine or tree can be
-joined back to its RDF graph: an FSM carries `FSM_URI` plus
-`STATE_URIS`/`EVENT_URIS`/`TRANSITION_URIS`/`REACTION_URIS`, a tree carries
-`TREE_URIS`/`NODE_URIS`/`BEHAVIOUR_URIS`/`FSM_URIS`, and each tree node reports
-its own IRI while ticking.
-
-The BT `python` target covers the coordination core, including the guard
-subset (`failure-if`/`success-if` preconditions and
-`on-success`/`on-failure`/`post` completion scripts), compiled to py_trees
-code at generation time, along with sub-trees (expanded per instance, with
-their ports remapped and unbound keys kept private). Constructs without a
-py_trees analogue — `switch`, `if-then-else`, `while-do-else`, `skip-if` and
-the scripting builtins — are rejected at generation time rather than emulated,
-since emulating them would silently change tick semantics; trees using them
-generate for `xml`/`cpp` only. The differences and the reasoning are documented
-in [py_trees vs BehaviorTree.CPP](https://secorolab.github.io/coord-dsl/pytrees_vs_btcpp.html).
+The BT `python` target covers the coordination core; constructs without a
+py_trees analogue are rejected at generation time rather than emulated, so trees
+using them generate for `xml`/`cpp` only —
+[the differences and why](https://secorolab.github.io/coord-dsl/pytrees_vs_btcpp.html).
 
 ## Installation
 
