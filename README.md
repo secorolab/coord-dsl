@@ -41,7 +41,7 @@ exact commands.
 | BT | `jsonld` | RDF graph — the canonical form |
 | BT | `dot` / `dot-console` | Tree drawing (dot, png, svg, pdf) |
 
-Alongside each artifact a generator writes a PROV-O `provenance.jsonld`
+Alongside each artifact a generator writes a PROV-O `provenance.ld.json`
 recording the source models, the artifact and the tool. Generated code also
 carries the model's IRIs, so a running machine or tree can be joined back to its
 graph — see

@@ -107,7 +107,7 @@ def gen_bt_dot_file(metamodel, model, output_path, overwrite, debug, **kwargs):
 def gen_bt_graph_file(metamodel, model, output_path, overwrite, debug, **kwargs):
     del metamodel, overwrite, debug, kwargs
     g, context, _ = get_bt_graph(model)
-    output_path = output_path or _output_name(model, "json")
+    output_path = output_path or _output_name(model, "ld.json")
     with open(output_path, "w") as f:
         f.write(g.serialize(format="json-ld", context=context, auto_compact=True, indent=2))
     record(model, "jsonld", output_path)

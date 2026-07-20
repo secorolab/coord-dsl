@@ -50,7 +50,7 @@ Generate
    textx generate fetch_and_place.btree --target jsonld  # RDF graph (.json)
    textx generate fetch_and_place.btree --target dot --format png   # a picture of the tree
 
-Each of these also writes a ``provenance.jsonld`` beside the artifact, recording
+Each of these also writes a ``provenance.ld.json`` beside the artifact, recording
 what produced it (see :doc:`../concepts`); running several targets into one
 directory leaves a single document describing them all.
 

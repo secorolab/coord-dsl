@@ -98,7 +98,7 @@ records the FSM instances, the dispatched event, and the await/fail targets and
 their kinds.
 
 Alongside the artifacts, each generator writes a **PROV-O** document,
-``provenance.jsonld``, recording what produced what: the source models it read
+``provenance.ld.json``, recording what produced what: the source models it read
 (``prov:used`` — for a tree, the ``.btree`` *and* the ``.fsm`` files it
 coordinates), the artifact it produced (``prov:wasGeneratedBy``) and the tool
 that did it (``prov:wasAssociatedWith``). Targets are separate commands, so the

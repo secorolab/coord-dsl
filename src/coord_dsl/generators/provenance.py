@@ -10,14 +10,16 @@ document beside the artifacts accumulates -- generating ``xml`` then ``cpp``
 leaves one document describing both, keyed by ``@id``.
 """
 
-import json
 from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
+from rdflib import Graph, Literal, Namespace, URIRef
+from rdflib.namespace import PROV, RDF, XSD
+
 PROV_NS = "https://secorolab.github.io/coord-dsl/provenance/"
-DOCUMENT_NAME = "provenance.jsonld"
-SCHEMA_VERSION = 1
+DOCUMENT_NAME = "provenance.ld.json"
+CDPROV = Namespace(PROV_NS)
 
 _CONTEXT = ["https://secorolab.github.io/metamodels/prov.json", {"cdprov": PROV_NS}]
 
@@ -58,64 +60,36 @@ def record(model, target: str, artifact: Path) -> Path:
     document = artifact.parent / DOCUMENT_NAME
     stem = Path(getattr(model, "_tx_filename", "model")).stem
     now = datetime.now(timezone.utc).isoformat()
-    activity = f"cdprov:activity/{_slug(target)}_generation/{_slug(stem)}"
+    activity = CDPROV[f"activity/{_slug(target)}_generation/{_slug(stem)}"]
 
     sources = source_paths(model)
-    nodes = {
-        "cdprov:bundle/coord-dsl-provenance": {
-            "@id": "cdprov:bundle/coord-dsl-provenance",
-            "@type": "prov:Bundle",
-        },
-        "cdprov:agent/coord_dsl": {
-            "@id": "cdprov:agent/coord_dsl",
-            "@type": ["prov:SoftwareAgent", "prov:Agent"],
-            "version": _tool_version("coord_dsl"),
-        },
-        activity: {
-            "@id": activity,
-            "@type": ["prov:Activity"],
-            "role": f"{target}_generation",
-            "used": [f"cdprov:entity/source/{_slug(path.name)}" for path in sources],
-            "wasAssociatedWith": "cdprov:agent/coord_dsl",
-            "startedAtTime": now,
-            "endedAtTime": now,
-        },
-    }
-    for path in sources:
-        nodes[f"cdprov:entity/source/{_slug(path.name)}"] = {
-            "@id": f"cdprov:entity/source/{_slug(path.name)}",
-            "@type": ["prov:Entity"],
-            "role": "source_model",
-            "atLocation": path.as_uri(),
-        }
-    artifact_id = f"cdprov:entity/generated/{_slug(artifact.name)}"
-    nodes[artifact_id] = {
-        "@id": artifact_id,
-        "@type": ["prov:Entity"],
-        "role": f"generated_{target}",
-        "atLocation": artifact.as_uri(),
-        "wasGeneratedBy": activity,
-        "generatedAtTime": now,
-    }
-
-    merged = {}
+    graph = Graph()
     if document.exists():
-        # keep what earlier targets recorded; an artifact regenerated now wins
-        for node in json.loads(document.read_text()).get("@graph", []):
-            merged[node["@id"]] = node
-    merged.update(nodes)
-    document.write_text(
-        json.dumps(
-            {
-                "schema_version": SCHEMA_VERSION,
-                "@context": _CONTEXT,
-                "@graph": [
-                    {k: v for k, v in node.items() if v is not None and v != []}
-                    for node in merged.values()
-                ],
-            },
-            indent=2,
-        )
-        + "\n"
-    )
+        graph.parse(document, format="json-ld")
+
+    bundle = CDPROV["bundle/coord-dsl-provenance"]
+    agent = CDPROV["agent/coord_dsl"]
+    artifact_id = CDPROV[f"entity/generated/{_slug(artifact.name)}"]
+    for subject in (activity, artifact_id):
+        graph.remove((subject, None, None))
+    graph.add((bundle, RDF.type, PROV.Bundle))
+    graph.add((agent, RDF.type, PROV.SoftwareAgent))
+    graph.add((agent, RDF.type, PROV.Agent))
+    tool_version = _tool_version("coord_dsl")
+    if tool_version:
+        graph.set((agent, CDPROV.version, Literal(tool_version)))
+    graph.add((activity, RDF.type, PROV.Activity))
+    graph.add((activity, PROV.wasAssociatedWith, agent))
+    graph.add((activity, PROV.startedAtTime, Literal(now, datatype=XSD.dateTime)))
+    graph.add((activity, PROV.endedAtTime, Literal(now, datatype=XSD.dateTime)))
+    for path in sources:
+        source = CDPROV[f"entity/source/{_slug(path.name)}"]
+        graph.add((source, RDF.type, PROV.Entity))
+        graph.set((source, PROV.atLocation, URIRef(path.as_uri())))
+        graph.add((activity, PROV.used, source))
+    graph.add((artifact_id, RDF.type, PROV.Entity))
+    graph.add((artifact_id, PROV.atLocation, URIRef(artifact.as_uri())))
+    graph.add((artifact_id, PROV.wasGeneratedBy, activity))
+    graph.add((artifact_id, PROV.generatedAtTime, Literal(now, datatype=XSD.dateTime)))
+    graph.serialize(document, format="json-ld", context=_CONTEXT, auto_compact=True, indent=2)
     return document

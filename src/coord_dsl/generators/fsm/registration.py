@@ -17,7 +17,7 @@ from coord_dsl.generators.dot import FORMATS, fsm_dot
 
 
 GRAMMAR_PATH = str(files("coord_dsl.metamodels").joinpath("fsm.tx"))
-SUPPORTED_GRAPH_FORMATS = {"ttl": "ttl", "xml": "xml", "json-ld": "json"}
+SUPPORTED_GRAPH_FORMATS = {"ttl": "ttl", "xml": "xml", "json-ld": "ld.json"}
 
 
 def fsm_metamodel():
