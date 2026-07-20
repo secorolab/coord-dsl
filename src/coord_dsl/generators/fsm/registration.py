@@ -12,6 +12,7 @@ from textx.scoping import providers as scoping_providers
 from coord_dsl.generators.common import clang_format_file, write_dot
 from coord_dsl.generators.fsm.classes import Event, FSM, FiredEvent, Reaction, State, Transition
 from coord_dsl.generators.fsm.graph import gen_cpp_header, gen_json, gen_python_code, get_fsm_graph
+from coord_dsl.generators.provenance import record
 from coord_dsl.generators.dot import FORMATS, fsm_dot
 
 
@@ -56,6 +57,7 @@ def graph_gen_file(metamodel, model, output_path, overwrite, debug, **kwargs):
         output_path = Path(model._tx_filename).parent / f"{model.fsm.name}.{SUPPORTED_GRAPH_FORMATS[format]}"
     with open(output_path, "w") as f:
         f.write(g.serialize(format=format, indent=2, context=context, auto_compact="autocompact" in kwargs))
+    record(model, "graph", output_path)
     print(f"FSM graph generated at {output_path}")
 
 
@@ -78,6 +80,7 @@ def gen_fsm_dot_file(metamodel, model, output_path, overwrite, debug, **kwargs):
         print(f"not overwriting existing file '{output_path}'")
         return
     write_dot(fsm_dot(g, fsm_ref), output_path, img_format)
+    record(model, "dot", output_path)
     print(f"FSM graph drawn at {output_path}")
 
 
@@ -89,6 +92,7 @@ def gen_cpp(metamodel, model, output_path, overwrite, debug, **kwargs):
     with open(output_path, "w") as f:
         f.write(rendered)
     clang_format_file(output_path)
+    record(model, "cpp", output_path)
     print(f"FSM C code generated at {output_path}")
 
 
@@ -99,6 +103,7 @@ def gen_python(metamodel, model, output_path, overwrite, debug, **kwargs):
     output_path = output_path or Path(model._tx_filename).parent / f"{model.fsm.name}.py"
     with open(output_path, "w") as f:
         f.write(rendered)
+    record(model, "python", output_path)
     print(f"FSM Python code generated at {output_path}")
 
 

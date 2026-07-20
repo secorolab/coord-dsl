@@ -97,6 +97,15 @@ tool-agnostic form; the XML and C++ backends are projections of it. For
 records the FSM instances, the dispatched event, and the await/fail targets and
 their kinds.
 
+Alongside the artifacts, each generator writes a **PROV-O** document,
+``provenance.jsonld``, recording what produced what: the source models it read
+(``prov:used`` — for a tree, the ``.btree`` *and* the ``.fsm`` files it
+coordinates), the artifact it produced (``prov:wasGeneratedBy``) and the tool
+that did it (``prov:wasAssociatedWith``). Targets are separate commands, so the
+document accumulates: generating ``xml`` then ``cpp`` leaves one document
+describing both. This is the same shape motion-spec-dsl emits, so the documents
+join.
+
 The graph does not stop at generation. Every entity it names keeps its **IRI in
 the generated code** — ``FSM_URI`` and the ``*_URIS`` tables for a machine,
 ``TREE_URIS`` / ``NODE_URIS`` / ``BEHAVIOUR_URIS`` / ``FSM_URIS`` for a tree,

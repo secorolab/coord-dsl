@@ -41,6 +41,9 @@ exact commands.
 | BT | `jsonld` | RDF graph — the canonical form |
 | BT | `dot` / `dot-console` | Tree drawing (dot, png, svg, pdf) |
 
+Every generator also writes a PROV-O `provenance.jsonld` beside its output,
+recording the source models, the artifact and the tool that produced it.
+
 Generated code keeps the model's IRIs, so a running machine or tree can be
 joined back to its RDF graph: an FSM carries `FSM_URI` plus
 `STATE_URIS`/`EVENT_URIS`/`TRANSITION_URIS`/`REACTION_URIS`, a tree carries

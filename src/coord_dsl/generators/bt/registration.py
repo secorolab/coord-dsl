@@ -33,6 +33,7 @@ from coord_dsl.generators.bt.classes import (
 from rdflib import Namespace, RDF
 
 from coord_dsl.generators.bt.graph import URI_MM_BT, get_bt_graph
+from coord_dsl.generators.provenance import record
 from coord_dsl.generators.dot import FORMATS, bt_dot
 from coord_dsl.generators.bt.python import render_tree
 from coord_dsl.generators.bt.xml import BUILTIN_TAG, evented_behaviours, gen_bt_xml
@@ -99,6 +100,7 @@ def gen_bt_dot_file(metamodel, model, output_path, overwrite, debug, **kwargs):
         print(f"not overwriting existing file '{output_path}'")
         return
     write_dot(bt_dot(g, root_ref), output_path, img_format)
+    record(model, "dot", output_path)
     print(f"BT graph drawn at {output_path}")
 
 
@@ -108,6 +110,7 @@ def gen_bt_graph_file(metamodel, model, output_path, overwrite, debug, **kwargs)
     output_path = output_path or _output_name(model, "json")
     with open(output_path, "w") as f:
         f.write(g.serialize(format="json-ld", context=context, auto_compact=True, indent=2))
+    record(model, "jsonld", output_path)
     print(f"BT JSON-LD generated at {output_path}")
 
 
@@ -117,6 +120,7 @@ def gen_bt_xml_file(metamodel, model, output_path, overwrite, debug, **kwargs):
     output_path = output_path or _output_name(model, "xml")
     with open(output_path, "w") as f:
         f.write(gen_bt_xml(g, root_ref))
+    record(model, "xml", output_path)
     print(f"BT XML generated at {output_path}")
 
 
@@ -234,6 +238,7 @@ def gen_bt_cpp_file(metamodel, model, output_path, overwrite, debug, **kwargs):
     with open(output_path, "w") as f:
         f.write(rendered)
     clang_format_file(output_path)
+    record(model, "cpp", output_path)
     print(f"BT C++ header generated at {output_path}")
 
 
@@ -257,6 +262,7 @@ def gen_bt_python_file(metamodel, model, output_path, overwrite, debug, **kwargs
     output_path = output_path or _output_name(model, "py")
     with open(output_path, "w") as f:
         f.write(rendered)
+    record(model, "python", output_path)
     print(f"BT Python module generated at {output_path}")
 
 
