@@ -13,6 +13,9 @@ It ships two languages:
   leaves, plus **FSM-coordination** nodes that dispatch events to FSMs and wait
   for them to finish.
 
+They share a surface syntax: lowercase keywords, ``{ }`` scopes whose entries
+are comma-separated, and ``<...>`` around every reference to a declared name.
+
 From one model you generate:
 
 .. list-table::

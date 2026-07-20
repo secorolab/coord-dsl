@@ -1,0 +1,35 @@
+ns right = "https://secorolab.github.io/models/coordination/fsm/right-arm/"
+
+fsm (ns=right) right_arm {
+    states {
+        IDLE,
+        PICKING,
+        PICKED,
+        MOVING_HANDOVER,
+        HANDOVER_POSE
+    }
+
+    events {
+        PICK,
+        PICK_DONE,
+        HANDOVER,
+        HANDOVER_DONE
+    }
+
+    start: <IDLE>
+    end:   <HANDOVER_POSE>
+
+    transitions {
+        PICK_OBJECT     { from: <IDLE>,            to: <PICKING> },
+        FINISH_PICK     { from: <PICKING>,         to: <PICKED> },
+        START_HANDOVER  { from: <PICKED>,          to: <MOVING_HANDOVER> },
+        FINISH_HANDOVER { from: <MOVING_HANDOVER>, to: <HANDOVER_POSE> }
+    }
+
+    reactions {
+        ON_PICK { when: <PICK>, do: <PICK_OBJECT> },
+        ON_PICK_DONE { when: <PICK_DONE>, do: <FINISH_PICK> },
+        ON_HANDOVER { when: <HANDOVER>, do: <START_HANDOVER> },
+        ON_HANDOVER_DONE { when: <HANDOVER_DONE>, do: <FINISH_HANDOVER> }
+    }
+}

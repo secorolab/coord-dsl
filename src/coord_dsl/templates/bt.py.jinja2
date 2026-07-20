@@ -129,6 +129,13 @@ class _Guarded(py_trees.decorators.Decorator):
 
 
 {% endif %}
+class _Key:
+    """A port bound to a blackboard key, read/written when the leaf ticks."""
+
+    def __init__(self, key):
+        self.key = key
+
+
 class _Leaf(py_trees.behaviour.Behaviour):
     """A declared action/condition; delegates to a runtime ``on_*`` hook."""
 
@@ -136,7 +143,20 @@ class _Leaf(py_trees.behaviour.Behaviour):
         super().__init__(name=name)
         self._runtime = runtime
         self._method = method
-        self.ports = ports
+        self._ports = ports
+
+    @property
+    def ports(self):
+        """Port values, with blackboard-bound ones read at access time."""
+        return {name: _bb_get(value.key) if isinstance(value, _Key) else value
+                for name, value in self._ports.items()}
+
+    def set_port(self, name, value):
+        """Write an ``out``/``inout`` port back to the blackboard."""
+        port = self._ports.get(name)
+        if not isinstance(port, _Key):
+            raise KeyError(f"port {name!r} is not bound to a blackboard key")
+        _bb_set(port.key, value)
 
     def update(self):
         return getattr(self._runtime, self._method)(self)

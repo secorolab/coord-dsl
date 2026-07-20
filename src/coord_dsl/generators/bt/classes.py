@@ -54,10 +54,11 @@ class DecoratorNode(IHasParent):
 
 
 class SubTreeNode(IHasParent):
-    def __init__(self, parent, tree, instance, ports, guards):
+    def __init__(self, parent, tree, instance, autoremap, ports, guards):
         super().__init__(parent=parent)
         self.tree = tree
         self.instance = instance
+        self.autoremap = autoremap
         self.ports = ports
         self.guards = guards
 

@@ -3,17 +3,22 @@
 # Author: Vamsi Kalagaturu
 """Regression tests for behaviour-tree RDF graph validation."""
 
+import json
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from rdflib import Literal, Namespace, RDF, URIRef
+from rdflib import Graph, Literal, Namespace, RDF, URIRef
+from rdflib.compare import isomorphic
 from textx.exceptions import TextXSyntaxError
 
 from coord_dsl.generators.bt.graph import URI_MM_BT, URI_MM_DATAFLOW, get_bt_graph
+from coord_dsl.generators.bt.python import render_tree
+from coord_dsl.generators.bt.xml import gen_bt_xml
 from coord_dsl.generators.bt.registration import (
     bt_metamodel,
     gen_bt_cpp_file,
+    gen_bt_graph_file,
     gen_bt_python_file,
     gen_bt_xml_file,
 )
@@ -39,8 +44,23 @@ def parse(source):
 
 
 class BtGraphTest(unittest.TestCase):
+    def test_generates_jsonld_graph(self):
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "warehouse_pick" / "fetch_and_place.btree"))
+        with TemporaryDirectory() as directory:
+            output = Path(directory) / "warehouse_pick.json"
+            gen_bt_graph_file(None, model, output, False, False)
+            document = json.loads(output.read_text())
+            reparsed = Graph().parse(str(output), format="json-ld")
+
+        self.assertIn("@context", document)
+        # the serialised graph is the same one the other targets render from
+        self.assertTrue(isomorphic(reparsed, get_bt_graph(model)[0]))
+        trees = set(reparsed.subjects(RDF.type, NS_BT.BehaviourTree))
+        self.assertIn(Namespace("https://secorolab.github.io/models/coordination/bt/warehouse-pick/")
+                      .warehouse_pick, trees)
+
     def test_generates_btcpp_header(self):
-        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "fetch_and_place.btree"))
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "warehouse_pick" / "fetch_and_place.btree"))
         with TemporaryDirectory() as directory:
             output = Path(directory) / "warehouse_pick.hpp"
             gen_bt_cpp_file(None, model, output, False, False)
@@ -56,7 +76,7 @@ class BtGraphTest(unittest.TestCase):
         self.assertNotIn("<BehaviorTree", header)
 
     def test_loop_uses_btcpp_string_loop(self):
-        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "fetch_and_place.btree"))
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "warehouse_pick" / "fetch_and_place.btree"))
         with TemporaryDirectory() as directory:
             output = Path(directory) / "warehouse_pick.xml"
             gen_bt_xml_file(None, model, output, False, False)
@@ -65,7 +85,7 @@ class BtGraphTest(unittest.TestCase):
         self.assertIn("<LoopString", xml)
 
     def test_declared_fsm_instances_are_included_in_jsonld(self):
-        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "dual_arm_fsms.btree"))
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "dual_arm" / "dual_arm_fsms.btree"))
 
         graph, _, _ = get_bt_graph(model)
         fsm_instances = set(graph.subjects(RDF.type, NS_BT.FSMInstance))
@@ -98,7 +118,7 @@ class BtGraphTest(unittest.TestCase):
         )
 
     def test_handover_coordinates_fsm_phases(self):
-        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "arm_handover_fsms.btree"))
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "arm_handover" / "arm_handover_fsms.btree"))
         sequence = model.main_tree.root
         self.assertTrue(all(node.fsm is node.await_fsm for node in sequence.children))
 
@@ -137,7 +157,7 @@ class BtGraphTest(unittest.TestCase):
         )
 
     def test_fsm_events_render_to_xml_and_cpp(self):
-        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "arm_handover_fsms.btree"))
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "arm_handover" / "arm_handover_fsms.btree"))
         with TemporaryDirectory() as directory:
             xml_out = Path(directory) / "arm_handover.xml"
             hpp_out = Path(directory) / "arm_handover.hpp"
@@ -157,7 +177,7 @@ class BtGraphTest(unittest.TestCase):
     def test_await_state_and_on_fail_render(self):
         source = (
             'ns n = "https://example.test/"\n'
-            'fsm arm = "left_arm.fsm"\n'
+            'fsm arm = "fsms/left_arm.fsm"\n'
             "main btree (ns=n) t {\n"
             "  send <arm.TAKE_POSE> await <arm.AT_TAKE_POSE> on-fail <arm.PLACED>\n"
             "}\n"
@@ -177,7 +197,7 @@ class BtGraphTest(unittest.TestCase):
         self.assertIn('on_fail_kind="state"', xml)
 
     def test_fsm_events_render_to_pytrees(self):
-        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "py_pick.btree"))
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "py_pick" / "py_pick.btree"))
         with TemporaryDirectory() as directory:
             output = Path(directory) / "py_pick.py"
             gen_bt_python_file(None, model, output, False, False)
@@ -195,7 +215,7 @@ class BtGraphTest(unittest.TestCase):
 
     def test_pytrees_renders_guards(self):
         # arm_handover uses [on-success]/[on-failure] guards -> _Guarded wrapper
-        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "arm_handover_fsms.btree"))
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "arm_handover" / "arm_handover_fsms.btree"))
         with TemporaryDirectory() as directory:
             output = Path(directory) / "arm_handover.py"
             gen_bt_python_file(None, model, output, False, False)
@@ -210,7 +230,7 @@ class BtGraphTest(unittest.TestCase):
         compile(module, "arm_handover.py", "exec")
 
     def test_pytrees_translates_precondition_guards(self):
-        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "dual_arm_fsms.btree"))
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "dual_arm" / "dual_arm_fsms.btree"))
         with TemporaryDirectory() as directory:
             output = Path(directory) / "dual_arm.py"
             gen_bt_python_file(None, model, output, False, False)
@@ -261,6 +281,100 @@ class BtGraphTest(unittest.TestCase):
         self.assertEqual(main, Namespace("https://a.test/").same)
         self.assertEqual(trees, {Namespace("https://a.test/").same, Namespace("https://b.test/").same})
 
+    def test_grouped_and_single_node_declarations_are_equivalent(self):
+        header = 'ns n = "https://example.test/"\n'
+        tree = 'main btree (ns=n) root { sequence { ping(message: "hi"), ok(level: 0.5) } }'
+        single = header + 'node action ping { in message: string }\nnode condition ok { in level: double }\n' + tree
+        grouped = header + 'nodes {\n action ping { in message: string },\n condition ok { in level: double }\n}\n' + tree
+
+        def shape(model):
+            return [(b.kind, b.name, [(p.direction, p.name, p.type) for p in b.ports])
+                    for b in model.behaviours]
+
+        self.assertEqual(shape(parse(single)), shape(parse(grouped)))
+        self.assertTrue(isomorphic(get_bt_graph(parse(single))[0], get_bt_graph(parse(grouped))[0]))
+
+    def test_subtree_ports_remap_and_private_keys_are_namespaced(self):
+        model = parse(
+            'ns n = "https://example.test/"\n'
+            'node condition seen { in target: string }\n'
+            'node action detect { in target: string, out pose: pose }\n'
+            'btree (ns=n) perceive (in target: string, out pose: pose) {\n'
+            '  reactive-fallback {\n'
+            '    seen (target: {target}),\n'
+            '    detect (target: {target}, pose: {pose}) [on-success: "attempts := 1"]\n'
+            '  }\n'
+            '}\n'
+            'main btree (ns=n) root {\n'
+            '  sequence {\n'
+            '    subtree <perceive> as find (target: {object_name}, pose: {pick_pose}),\n'
+            '    subtree <perceive> as find2 (target: "fixed", pose: {other_pose})\n'
+            '  }\n'
+            '}\n'
+        )
+        graph, _, root_ref = get_bt_graph(model)
+        tree = render_tree(graph, root_ref)
+
+        # bound parameters take the caller's key, a literal argument is inlined
+        self.assertIn("{'target': _Key('object_name'), 'pose': _Key('pick_pose')}", tree)
+        self.assertIn("{'target': 'fixed', 'pose': _Key('other_pose')}", tree)
+        # a key the caller did not bind stays private to each instance
+        self.assertIn("_bb_set('find/attempts', 1)", tree)
+        self.assertIn("_bb_set('find2/attempts', 1)", tree)
+        self.assertNotIn("_bb_set('attempts'", tree)
+
+    def test_autoremap_subtree_shares_the_caller_keys(self):
+        model = parse(
+            'ns n = "https://example.test/"\n'
+            'node action probe { in target: string }\n'
+            'btree (ns=n) inner { probe (target: {goal}) [on-success: "seen := true"] }\n'
+            'main btree (ns=n) root {\n'
+            '  sequence { subtree <inner> as shared autoremap, subtree <inner> as private }\n'
+            '}\n'
+        )
+        graph, _, root_ref = get_bt_graph(model)
+
+        self.assertIn('_autoremap="true"', gen_bt_xml(graph, root_ref))
+        tree = render_tree(graph, root_ref)
+        self.assertIn("{'target': _Key('goal')}", tree)              # autoremapped
+        self.assertIn("_bb_set('seen', True)", tree)
+        self.assertIn("{'target': _Key('private/goal')}", tree)      # private by default
+        self.assertIn("_bb_set('private/seen', True)", tree)
+
+    def test_try_catch_generates_btcpp_and_is_rejected_for_pytrees(self):
+        model = parse(
+            'ns n = "https://example.test/"\n'
+            'nodes { action work, action cleanup }\n'
+            'main btree (ns=n) root { try-catch { work, cleanup } }\n'
+        )
+        graph, _, root_ref = get_bt_graph(model)
+
+        self.assertIn("<TryCatch>", gen_bt_xml(graph, root_ref))
+        with self.assertRaisesRegex(NotImplementedError, "try-catch"):
+            render_tree(graph, root_ref)
+
+    def test_rejects_recursive_subtree(self):
+        model = parse(
+            'ns n = "https://example.test/"\n'
+            'node action ping\n'
+            'btree (ns=n) loop { sequence { ping, subtree <loop> } }\n'
+            'main btree (ns=n) root { subtree <loop> }\n'
+        )
+        graph, _, root_ref = get_bt_graph(model)
+
+        with self.assertRaisesRegex(NotImplementedError, "recursive"):
+            render_tree(graph, root_ref)
+
+    def test_blackboard_bound_port_is_not_silently_dropped(self):
+        model = parse(
+            'ns n = "https://example.test/"\n'
+            'node action ping { in message: string }\n'
+            'main btree (ns=n) root { ping (message: {shared}) }\n'
+        )
+        graph, _, root_ref = get_bt_graph(model)
+
+        self.assertIn("{'message': _Key('shared')}", render_tree(graph, root_ref))
+
     def test_rejects_duplicate_guards_and_ports(self):
         sources = (
             ("guard", """ns n = \"https://example.test/\"\nnode action ping\nmain btree (ns=n) root { sequence [skip-if: \"one\", skip-if: \"two\"] { ping } }"""),
@@ -276,7 +390,7 @@ class BtGraphTest(unittest.TestCase):
         model = parse(
             'ns n = "https://example.test/"\n'
             'node action ping { in message: string }\n'
-            'main btree (ns=n) root { sequence { ping(message: "fixed") ping(message: {shared}) } }'
+            'main btree (ns=n) root { sequence { ping(message: "fixed"), ping(message: {shared}) } }'
         )
 
         graph, _, _ = get_bt_graph(model)

@@ -39,11 +39,11 @@ The arm's lifecycle: it sits ``IDLE``; a ``PICK`` command moves it to
 ``PICKING``; when the motion finishes (a ``PICK_DONE`` event) it reaches
 ``PICKED``. (It has two more states for a later handover; ignore them here.)
 
-.. literalinclude:: ../examples/models/bt/right_arm.fsm
+.. literalinclude:: ../examples/models/bt/fsms/right_arm.fsm
    :language: text
    :caption: right_arm.fsm
 
-Read the ``REACTIONS`` as the policy: *when* ``PICK`` fires, *do* the
+Read the ``reactions`` as the policy: *when* ``PICK`` fires, *do* the
 ``PICK_OBJECT`` transition (``IDLE`` → ``PICKING``); *when* ``PICK_DONE`` fires,
 *do* ``FINISH_PICK`` (``PICKING`` → ``PICKED``). The command event (``PICK``)
 comes from outside; the completion event (``PICK_DONE``) comes from the arm's
@@ -55,7 +55,7 @@ Step 2 — model the gripper FSM (with a fault)
 Same shape, but ``GRASPING`` has **two** exits — success (``GRASPED_OK`` →
 ``GRASPED``) or fault (``GRASP_FAULT`` → ``FAULT``):
 
-.. literalinclude:: ../examples/models/bt/gripper.fsm
+.. literalinclude:: ../examples/models/bt/fsms/gripper.fsm
    :language: text
    :caption: gripper.fsm
 
@@ -68,7 +68,7 @@ Step 3 — model the coordinating tree
 Now the behaviour tree. Import the two FSMs, then a ``sequence`` of two
 ``send/await`` nodes:
 
-.. literalinclude:: ../examples/models/bt/py_pick.btree
+.. literalinclude:: ../examples/models/bt/py_pick/py_pick.btree
    :language: text
    :caption: py_pick.btree
 
@@ -125,7 +125,7 @@ hooks you implement** — one per FSM:
 motion is "done", produces the completion event. Here each motion "runs" for a
 few ticks, then completes:
 
-.. literalinclude:: ../examples/models/bt/py_pick_demo.py
+.. literalinclude:: ../examples/models/bt/py_pick/py_pick_demo.py
    :language: python
    :caption: py_pick_demo.py
    :lines: 26-63
@@ -190,7 +190,7 @@ The same model, the same controllers — a different runtime.
 **B3. Write the runtime.** Subclass it and implement the two controllers — the
 same logic as the Python ``step_*`` methods:
 
-.. literalinclude:: ../examples/models/bt/py_pick_main.cpp
+.. literalinclude:: ../examples/models/bt/py_pick/py_pick_main.cpp
    :language: cpp
    :caption: py_pick_main.cpp
    :lines: 31-66

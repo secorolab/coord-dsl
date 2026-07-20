@@ -2,7 +2,7 @@ Model:
     imports*=Import
     namespaces*=NamespaceDeclare
     fsms*=FSMDecl
-    behaviours*=BehaviourDecl
+    ("nodes" "{" behaviours+=BehaviourDecl[","] "}" | behaviours+=BehaviourDecl)*
     trees*=BehaviourTree
     main_tree=MainBehaviourTree
     trees*=BehaviourTree
@@ -13,7 +13,7 @@ FSMDecl:
 ;
 
 BehaviourDecl:
-    "node" kind=LeafKind name=IRI_TRUNK ("{" ports*=PortDecl[","] "}")?
+    "node"? kind=LeafKind name=IRI_TRUNK ("{" ports*=PortDecl[","] "}")?
 ;
 
 LeafKind:
@@ -52,7 +52,7 @@ Node:
 
 CompositeNode:
     type=CompositeType ("as" instance=IRI_TRUNK)? ("(" ports+=Port[","] ")")? (guards=NodeGuards)? "{"
-        children+=Node
+        children+=Node[","]
     "}"
 ;
 
@@ -60,7 +60,8 @@ CompositeType:
     "sequence-with-memory" | "reactive-sequence" | "sequence" |
     "reactive-fallback"    | "fallback"          | "selector" |
     "parallel-all"         | "parallel"          |
-    "if-then-else"         | "while-do-else"      | "switch"
+    "if-then-else"         | "while-do-else"      | "switch"    |
+    "try-catch"
 ;
 
 DecoratorNode:
@@ -72,13 +73,15 @@ DecoratorNode:
 LeafNode:
     behaviour=[BehaviourDecl|FQN] ("as" instance=IRI_TRUNK)? ("(" ports+=Port[","] ")")? (guards=NodeGuards)?
     ("{"
-        ("start-event" ":" start_event=EventName)?
-        ("end-event"   ":" end_event=EventName)?
+        (   "start-event" ":" start_event=EventName ("," "end-event" ":" end_event=EventName)?
+          | "end-event"   ":" end_event=EventName
+        )
     "}")?
 ;
 
 SubTreeNode:
-    "subtree" "<" tree=[Tree|FQN] ">" ("as" instance=IRI_TRUNK)? ("(" ports+=Port[","] ")")? (guards=NodeGuards)?
+    "subtree" "<" tree=[Tree|FQN] ">" ("as" instance=IRI_TRUNK)? (autoremap?="autoremap")?
+    ("(" ports+=Port[","] ")")? (guards=NodeGuards)?
 ;
 
 FSMEventNode:

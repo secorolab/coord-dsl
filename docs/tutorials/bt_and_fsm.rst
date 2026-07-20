@@ -19,7 +19,7 @@ node dispatches a command event and blocks (``RUNNING``) until its target is
 reached; in a ``sequence`` the FSMs act in turn, under ``parallel-all`` they run
 together.
 
-.. literalinclude:: ../../examples/models/bt/arm_handover_fsms.btree
+.. literalinclude:: ../../examples/models/bt/arm_handover/arm_handover_fsms.btree
    :language: text
    :caption: arm_handover_fsms.btree — a sequence coordinating two arms
 
@@ -37,7 +37,7 @@ an FSM *event* or an FSM *state*:
   boundary (an asynchronous controller can swap event buffers before the tree
   samples them).
 
-.. literalinclude:: ../../examples/models/bt/py_pick.btree
+.. literalinclude:: ../../examples/models/bt/py_pick/py_pick.btree
    :language: text
    :caption: py_pick.btree — state await plus an on-fail target
 
@@ -45,26 +45,28 @@ an FSM *event* or an FSM *state*:
 independently of any scripted ``[failure-if]`` guard. The gripper FSM has the
 explicit fault branch:
 
-.. literalinclude:: ../../examples/models/bt/gripper.fsm
+.. literalinclude:: ../../examples/models/bt/fsms/gripper.fsm
    :language: text
-   :caption: gripper.fsm (excerpt)
-   :lines: 3-18
+   :caption: gripper.fsm
 
 Generate
 --------
 
-Generate the FSM runtimes **and** the BT runtime, for whichever language:
+Generate the FSM runtimes **and** the BT runtime, for whichever language.
+Each example lives in its own directory under ``examples/models/bt``, with the
+FSMs they share in ``fsms/``; generated code is **not** checked in, so run this
+from the example's directory before building or running it:
 
 .. code-block:: bash
 
-   # Python (py_trees)
-   textx generate right_arm.fsm --target python -o right_arm.py
-   textx generate gripper.fsm   --target python -o gripper.py
+   # Python (py_trees) — from examples/models/bt/py_pick
+   textx generate ../fsms/right_arm.fsm --target python -o right_arm.py
+   textx generate ../fsms/gripper.fsm   --target python -o gripper.py
    textx generate py_pick.btree --target python
 
-   # C++ (BehaviorTree.CPP + coord2b)
-   textx generate right_arm.fsm --target cpp -o right_arm.hpp
-   textx generate gripper.fsm   --target cpp -o gripper.hpp
+   # C++ (BehaviorTree.CPP + coord2b) — from examples/models/bt/arm_handover
+   textx generate ../fsms/right_arm.fsm --target cpp -o right_arm.hpp
+   textx generate ../fsms/left_arm.fsm  --target cpp -o left_arm.hpp
    textx generate arm_handover_fsms.btree --target cpp
    textx generate arm_handover_fsms.btree --target xml
 
@@ -88,7 +90,7 @@ Subclass the generated runtime, implement each ``step_<fsm>``, build the tree,
 and tick it. The controller below completes a motion after a few ticks by
 producing the FSM's completion event:
 
-.. literalinclude:: ../../examples/models/bt/py_pick_demo.py
+.. literalinclude:: ../../examples/models/bt/py_pick/py_pick_demo.py
    :language: python
    :caption: py_pick_demo.py — controllers + tick loop
    :lines: 26-63
@@ -101,12 +103,17 @@ producing the FSM's completion event:
 ``right_arm`` runs to its ``PICKED`` state, the tree advances, then the gripper
 runs — to ``GRASPED`` (SUCCESS) or ``FAULT`` (FAILURE via ``on-fail``).
 
-.. note::
+``arm_handover`` and ``dual_arm`` ship the same shape — a runtime subclass plus
+a tick loop — in ``arm_handover_demo.py`` and ``dual_arm_demo.py``. Their
+``[on-success]``/``[on-failure]``/``[failure-if]`` guards translate to a
+generated ``_Guarded`` decorator over the py_trees blackboard (see :doc:`bt`),
+so the fault path is driven by setting a blackboard flag:
 
-   ``arm_handover`` and ``dual_arm`` also generate with ``--target python`` —
-   their ``[on-success]``/``[on-failure]``/``[failure-if]`` guards translate to
-   a generated ``_Guarded`` decorator over the py_trees blackboard (see
-   :doc:`bt`).
+.. code-block:: bash
+
+   python arm_handover_demo.py                # right_arm picks and hands over, left_arm places
+   python dual_arm_demo.py                    # both arms in parallel -> SUCCESS
+   python dual_arm_demo.py --fault left       # left branch fails its retries -> FAILURE
 
 Running in C++ (synchronous)
 ----------------------------
@@ -114,7 +121,7 @@ Running in C++ (synchronous)
 Same shape in C++: subclass the runtime, implement ``step_<fsm>``, register and
 tick. Here the BT tick drives each FSM directly.
 
-.. literalinclude:: ../../examples/models/bt/arm_handover_main.cpp
+.. literalinclude:: ../../examples/models/bt/arm_handover/arm_handover_main.cpp
    :language: cpp
    :caption: arm_handover_main.cpp — the step_<fsm> seam
    :lines: 36-57
@@ -147,12 +154,12 @@ policy:
 * **await states**, not events (an event edge can't be sampled across the thread
   boundary).
 
-.. literalinclude:: ../../examples/models/bt/async_pick_main.cpp
+.. literalinclude:: ../../examples/models/bt/async_pick/async_pick_main.cpp
    :language: cpp
    :caption: async_pick_main.cpp — execution-policy overrides
    :lines: 65-86
 
-.. literalinclude:: ../../examples/models/bt/async_pick_main.cpp
+.. literalinclude:: ../../examples/models/bt/async_pick/async_pick_main.cpp
    :language: cpp
    :caption: async_pick_main.cpp — the 1 kHz controller thread
    :lines: 107-128
@@ -167,8 +174,20 @@ The interleaved log shows the ``FSM`` state stream (each 1 kHz thread) beside th
 ``BT`` node transitions: ``right_arm`` reaches ``Picked`` after ~60 ms of real
 motion, the tree polls the state and advances, then the gripper runs.
 
-The same override seam works in Python (subclass the runtime, override
-``advance`` / ``dispatch`` / ``current_state``, run each FSM in a thread).
+The same override seam works in Python — ``async_pick_demo.py`` is the direct
+counterpart: one ``threading.Thread`` per FSM at 1 kHz, ``advance`` overridden
+to a no-op, and ``dispatch`` / ``current_state`` / ``event_present`` taking the
+controller's lock.
+
+.. literalinclude:: ../../examples/models/bt/async_pick/async_pick_demo.py
+   :language: python
+   :caption: async_pick_demo.py — execution-policy overrides and the 1 kHz loop
+   :lines: 72-118
+
+.. code-block:: bash
+
+   python async_pick_demo.py            # -> SUCCESS
+   python async_pick_demo.py --fault    # gripper faults -> FAILURE (exit 1)
 
 Choosing a model
 ----------------

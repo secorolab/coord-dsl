@@ -11,11 +11,16 @@ Modelling
 
 An FSM is a ``.fsm`` file. It declares:
 
-* **STATES** — the stateful behaviours; a ``START_STATE`` and ``END_STATE``.
-* **EVENTS** — occurrences the machine reacts to.
-* **TRANSITIONS** — a directed ``FROM``/``TO`` edge between two states.
-* **REACTIONS** — the policy: ``WHEN`` an event fires, ``DO`` a transition, and
-  optionally ``FIRES`` further events.
+* **states** — the stateful behaviours; a ``start`` and an ``end`` state.
+* **events** — occurrences the machine reacts to.
+* **transitions** — a directed ``from``/``to`` edge between two states.
+* **reactions** — the policy: ``when`` an event fires, ``do`` a transition, and
+  optionally ``fires`` further events.
+
+Each of those is a ``{ }`` scope whose entries are separated by commas.
+Declarations are bare names; every *reference* to one is written in angle
+brackets — ``start: <IDLE>``, ``from: <IDLE>, to: <GRASPING>`` — the same
+reference syntax ``.btree`` uses for ``subtree <t>`` and ``send <fsm.event>``.
 
 .. literalinclude:: ../../examples/models/fsm/example.fsm
    :language: text

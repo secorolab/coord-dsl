@@ -75,6 +75,7 @@ COMPOSITE_CLASS = {
     "if-then-else": "IfThenElse",
     "while-do-else": "WhileDoElse",
     "switch": "Switch",
+    "try-catch": "TryCatch",
 }
 
 PARAMETER_DIRECTION = {
@@ -220,6 +221,8 @@ def get_bt_graph(model) -> tuple[Graph, dict, URIRef]:
         elif isinstance(node, SubTreeNode):
             g.add((uri, RDF.type, NS_BT.SubTree))
             g.add((uri, NS_BT["of-tree"], tree_uri[node.tree]))
+            if node.autoremap:
+                g.add((uri, NS_BT["auto-remap"], Literal(True)))
             add_bindings(uri, node)
         elif isinstance(node, FSMEventNode):
             fsm_model, fsm_ref = fsm_refs[node.fsm]

@@ -13,21 +13,29 @@ A ``.btree`` first **declares the leaf behaviours** it uses — ``action`` or
 ``condition`` nodes with typed ports (``in`` / ``out`` / ``inout``) — then builds
 the tree from those leaves, composites, decorators and sub-trees.
 
-.. literalinclude:: ../../examples/models/bt/fetch_and_place.btree
+Declare leaves one per line with ``node action foo``, or group them in a
+``nodes { … }`` block. The two forms are equivalent and can be mixed in one
+file, as below.
+
+.. literalinclude:: ../../examples/models/bt/warehouse_pick/fetch_and_place.btree
    :language: text
-   :caption: examples/models/bt/fetch_and_place.btree (excerpt)
-   :lines: 1-48
+   :caption: examples/models/bt/warehouse_pick/fetch_and_place.btree (excerpt)
+   :lines: 1-51
 
 The vocabulary maps onto BehaviorTree.CPP v4 constructs:
 
 * **Composites** — ``sequence``, ``sequence-with-memory``, ``reactive-sequence``,
   ``fallback`` / ``selector``, ``reactive-fallback``, ``parallel``,
-  ``parallel-all``, ``if-then-else``, ``while-do-else``, ``switch``.
+  ``parallel-all``, ``if-then-else``, ``while-do-else``, ``switch``,
+  ``try-catch``.
 * **Decorators** — ``inverter``, ``retry``, ``timeout``, ``repeat``, ``run-once``,
   ``force-success`` / ``force-failure``, ``keep-running``, ``delay``,
   ``precondition``, ``loop`` …
 * **Ports** — bound to a blackboard key ``{key}``, a literal, or a quantity with
   units (``0.5 m/s``, ``5000 ms``).
+* **Sub-trees** — ``subtree <t> as inst (port: {key})``. Keys the caller does
+  not bind are private to the instance; add ``autoremap`` after the instance
+  name (BT.CPP's ``_autoremap``) to share the caller's keys by name instead.
 * **Guards** — scripted pre/post conditions on any node:
   ``[skip-if: ...]``, ``[failure-if: ...]``, ``[while: ...]``,
   ``[on-success: ...]`` and friends.
@@ -39,8 +47,14 @@ Generate
 
    textx generate fetch_and_place.btree --target xml     # structure (.xml)
    textx generate fetch_and_place.btree --target cpp     # C++ runtime contract (.hpp)
-   textx generate fetch_and_place.btree --target python  # py_trees module (.py)
    textx generate fetch_and_place.btree --target jsonld  # RDF graph (.json)
+
+This model is a BT.CPP **vocabulary showcase**, so ``--target python`` rejects
+it: it uses ``switch``, ``if-then-else``, ``while-do-else`` and the scripting
+builtins, none of which have py_trees equivalents (see
+:doc:`../pytrees_vs_btcpp`). Its sub-trees are fine — those the ``python``
+target expands per instance. The FSM-coordination trees in :doc:`bt_and_fsm`
+generate for both runtimes.
 
 The tree **structure** is emitted differently per runtime: BehaviorTree.CPP loads
 an ``.xml`` at run time, while py_trees builds the tree in Python code
@@ -59,12 +73,12 @@ The ``cpp`` target produces a header with:
 Subclass the runtime, implement each leaf (read ports, return a ``NodeStatus``),
 register, load, and tick. The engine owns the loop:
 
-.. literalinclude:: ../../examples/models/bt/warehouse_pick_main.cpp
+.. literalinclude:: ../../examples/models/bt/warehouse_pick/warehouse_pick_main.cpp
    :language: cpp
    :caption: warehouse_pick_main.cpp — a leaf implementation
    :lines: 48-56
 
-.. literalinclude:: ../../examples/models/bt/warehouse_pick_main.cpp
+.. literalinclude:: ../../examples/models/bt/warehouse_pick/warehouse_pick_main.cpp
    :language: cpp
    :caption: warehouse_pick_main.cpp — register, load, tick
    :lines: 137-163
@@ -131,6 +145,8 @@ complete one. Mappings:
      - ``SuccessIsRunning`` / ``OneShot``
    * - ``retry`` / ``repeat`` / ``timeout``
      - ``Retry`` / ``Repeat`` / ``Timeout``
+   * - ``subtree`` (with or without ``autoremap``)
+     - expanded per instance, keys resolved at generation time
    * - ``send/await`` (FSM coordination)
      - a generated ``_FSMEvent`` behaviour — see :doc:`bt_and_fsm`
    * - ``[failure-if]`` / ``[success-if]`` / ``[on-success]`` / ``[on-failure]`` / ``[post]``
@@ -141,8 +157,8 @@ complete one. Mappings:
 
    Constructs without a clean py_trees analogue — ``[skip-if]`` / ``[while]``
    / ``[on-halted]`` guards, ``if-then-else`` / ``while-do-else`` /
-   ``switch``, ``delay`` / ``loop`` / ``precondition``, and scripted builtins
-   — raise ``NotImplementedError`` at generation time. The supported guard
+   ``switch`` / ``try-catch``, ``delay`` / ``loop`` / ``precondition``, and
+   scripted builtins — raise ``NotImplementedError`` at generation time. The supported guard
    subset and the reasoning behind each gap are in
    :ref:`pytrees-vs-btcpp`.
 

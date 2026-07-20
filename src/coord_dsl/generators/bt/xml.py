@@ -56,6 +56,7 @@ COMPOSITE_TAG = {
     "parallel-all": "ParallelAll",
     "if-then-else": "IfThenElse",
     "while-do-else": "WhileDoElse",
+    "try-catch": "TryCatch",
 }
 
 DECORATOR_TAG = {
@@ -157,6 +158,8 @@ def _render(g, node):
     elif NS_BT.SubTree in types:
         tree = g.value(node, NS_BT["of-tree"])
         el = Element("SubTree", {"ID": str(g.value(tree, NS_BT["behaviour-tree-name"]))})
+        if g.value(node, NS_BT["auto-remap"]):
+            el.set("_autoremap", "true")
         _add_bindings(g, node, el)
         _add_common(g, node, el)
     elif NS_BT.FSMEvent in types:
