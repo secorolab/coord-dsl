@@ -48,6 +48,7 @@ Generate
    textx generate fetch_and_place.btree --target xml     # structure (.xml)
    textx generate fetch_and_place.btree --target cpp     # C++ runtime contract (.hpp)
    textx generate fetch_and_place.btree --target jsonld  # RDF graph (.json)
+   textx generate fetch_and_place.btree --target dot --format png   # a picture of the tree
 
 This model is a BT.CPP **vocabulary showcase**, so ``--target python`` rejects
 it: it uses ``switch``, ``if-then-else``, ``while-do-else`` and the scripting

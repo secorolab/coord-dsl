@@ -9,9 +9,10 @@ from pathlib import Path
 from textx import GeneratorDesc, LanguageDesc, metamodel_from_file
 from textx.scoping import providers as scoping_providers
 
-from coord_dsl.generators.common import clang_format_file
+from coord_dsl.generators.common import clang_format_file, write_dot
 from coord_dsl.generators.fsm.classes import Event, FSM, FiredEvent, Reaction, State, Transition
 from coord_dsl.generators.fsm.graph import gen_cpp_header, gen_json, gen_python_code, get_fsm_graph
+from coord_dsl.generators.dot import FORMATS, fsm_dot
 
 
 GRAMMAR_PATH = str(files("coord_dsl.metamodels").joinpath("fsm.tx"))
@@ -58,6 +59,28 @@ def graph_gen_file(metamodel, model, output_path, overwrite, debug, **kwargs):
     print(f"FSM graph generated at {output_path}")
 
 
+def gen_fsm_dot_console(metamodel, model, output_path, overwrite, debug, **kwargs):
+    del metamodel, output_path, overwrite, debug, kwargs
+    g, _, fsm_ref = get_fsm_graph(model)
+    print(fsm_dot(g, fsm_ref), end="")
+
+
+def gen_fsm_dot_file(metamodel, model, output_path, overwrite, debug, **kwargs):
+    del metamodel, debug
+    img_format = kwargs.get("format", "dot")
+    if img_format not in ("dot",) + FORMATS:
+        raise ValueError(
+            f"unhandled format {img_format!r} for the state-machine graph, try {['dot', *FORMATS]}"
+        )
+    g, _, fsm_ref = get_fsm_graph(model)
+    output_path = output_path or Path(model._tx_filename).parent / f"{model.fsm.name}.{img_format}"
+    if Path(output_path).exists() and not overwrite:
+        print(f"not overwriting existing file '{output_path}'")
+        return
+    write_dot(fsm_dot(g, fsm_ref), output_path, img_format)
+    print(f"FSM graph drawn at {output_path}")
+
+
 def gen_cpp(metamodel, model, output_path, overwrite, debug, **kwargs):
     del metamodel, overwrite, debug, kwargs
     g, _, fsm_ref = get_fsm_graph(model)
@@ -90,6 +113,19 @@ fsm_file_gen = GeneratorDesc(
     target="graph",
     description="Generates a file with the FSM graph in RDF format",
     generator=graph_gen_file,
+)
+fsm_dot_console_gen = GeneratorDesc(
+    language="coord_dsl_fsm",
+    target="dot-console",
+    description="Print the state machine as a graphviz graph",
+    generator=gen_fsm_dot_console,
+)
+fsm_dot_gen = GeneratorDesc(
+    language="coord_dsl_fsm",
+    target="dot",
+    description="Draw the state machine: states joined by the reactions that fire them."
+    " Formats: dot (default), png, svg, pdf",
+    generator=gen_fsm_dot_file,
 )
 fsm_cpp_gen = GeneratorDesc(
     language="coord_dsl_fsm",

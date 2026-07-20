@@ -67,6 +67,7 @@ Generate
    textx generate example.fsm --target python -o ex_fsm.py
    textx generate example.fsm --target cpp    -o ex_fsm.hpp
    textx generate example.fsm --target graph --format json-ld --autocompact
+   textx generate example.fsm --target dot --format png     # a picture of the machine
 
 Each target emits ``create_fsm()``, ``destroy_fsm()`` (C++), the
 state/event/transition/reaction enums, and ``*_URIS`` tables. No control loop —

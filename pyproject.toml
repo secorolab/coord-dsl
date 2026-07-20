@@ -47,8 +47,12 @@ where = ["src"]
 [project.entry-points."textx_generators"]
 "fsm_graph_console" = "coord_dsl.generators.fsm.registration:fsm_console_gen"
 "fsm_graph_file" = "coord_dsl.generators.fsm.registration:fsm_file_gen"
+"fsm_dot" = "coord_dsl.generators.fsm.registration:fsm_dot_gen"
+"fsm_dot_console" = "coord_dsl.generators.fsm.registration:fsm_dot_console_gen"
 "fsm_cpp" = "coord_dsl.generators.fsm.registration:fsm_cpp_gen"
 "fsm_python" = "coord_dsl.generators.fsm.registration:fsm_python_gen"
+"bt_dot" = "coord_dsl.generators.bt.registration:bt_dot_gen"
+"bt_dot_console" = "coord_dsl.generators.bt.registration:bt_dot_console_gen"
 "bt_graph" = "coord_dsl.generators.bt.registration:bt_graph_gen"
 "bt_xml" = "coord_dsl.generators.bt.registration:bt_xml_gen"
 "bt_cpp" = "coord_dsl.generators.bt.registration:bt_cpp_gen"

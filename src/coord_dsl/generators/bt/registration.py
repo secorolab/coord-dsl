@@ -11,7 +11,7 @@ from textx import GeneratorDesc, LanguageDesc, metamodel_from_file
 from textx.scoping import providers as scoping_providers
 
 from rdf_utils.naming import get_valid_var_name
-from coord_dsl.generators.common import clang_format_file
+from coord_dsl.generators.common import clang_format_file, write_dot
 from coord_dsl.generators.bt.classes import (
     BehaviourDecl,
     BehaviourTree,
@@ -31,6 +31,7 @@ from coord_dsl.generators.bt.classes import (
     SubTreeNode,
 )
 from coord_dsl.generators.bt.graph import get_bt_graph
+from coord_dsl.generators.dot import FORMATS, bt_dot
 from coord_dsl.generators.bt.python import render_tree
 from coord_dsl.generators.bt.xml import BUILTIN_TAG, evented_behaviours, gen_bt_xml
 from coord_dsl.generators.fsm.registration import fsm_metamodel
@@ -73,6 +74,28 @@ bt_lang = LanguageDesc(
 
 def _output_name(model, ext):
     return Path(model._tx_filename).parent / f"{model.main_tree.name}.{ext}"
+
+
+def gen_bt_dot_console(metamodel, model, output_path, overwrite, debug, **kwargs):
+    del metamodel, output_path, overwrite, debug, kwargs
+    g, _, root_ref = get_bt_graph(model)
+    print(bt_dot(g, root_ref), end="")
+
+
+def gen_bt_dot_file(metamodel, model, output_path, overwrite, debug, **kwargs):
+    del metamodel, debug
+    img_format = kwargs.get("format", "dot")
+    if img_format not in ("dot",) + FORMATS:
+        raise ValueError(
+            f"unhandled format {img_format!r} for the tree graph, try {['dot', *FORMATS]}"
+        )
+    g, _, root_ref = get_bt_graph(model)
+    output_path = output_path or _output_name(model, img_format)
+    if Path(output_path).exists() and not overwrite:
+        print(f"not overwriting existing file '{output_path}'")
+        return
+    write_dot(bt_dot(g, root_ref), output_path, img_format)
+    print(f"BT graph drawn at {output_path}")
 
 
 def gen_bt_graph_file(metamodel, model, output_path, overwrite, debug, **kwargs):
@@ -188,6 +211,19 @@ def gen_bt_python_file(metamodel, model, output_path, overwrite, debug, **kwargs
     print(f"BT Python module generated at {output_path}")
 
 
+bt_dot_console_gen = GeneratorDesc(
+    language="bt",
+    target="dot-console",
+    description="Print the behaviour tree as a graphviz graph",
+    generator=gen_bt_dot_console,
+)
+bt_dot_gen = GeneratorDesc(
+    language="bt",
+    target="dot",
+    description="Draw the behaviour tree: composites, decorators, leaves and the sub-trees"
+    " they run. Formats: dot (default), png, svg, pdf",
+    generator=gen_bt_dot_file,
+)
 bt_graph_gen = GeneratorDesc(
     language="bt",
     target="jsonld",

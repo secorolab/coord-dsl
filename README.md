@@ -34,10 +34,12 @@ exact commands.
 | FSM | `cpp` | Self-contained state machine + step function for the [coord2b](https://github.com/rosym-project/coord2b) runtime |
 | FSM | `python` | The same, for the bundled `coord_dsl` runtime |
 | FSM | `graph` / `console` | RDF graph (JSON-LD, Turtle or XML) |
+| FSM | `dot` / `dot-console` | State-machine drawing (dot, png, svg, pdf) |
 | BT | `xml` | [BehaviorTree.CPP](https://www.behaviortree.dev/) v4 tree structure |
 | BT | `cpp` | Runtime contract + node registrations (BehaviorTree.CPP) |
 | BT | `python` | [py_trees](https://py-trees.readthedocs.io/) tree + runtime contract |
 | BT | `jsonld` | RDF graph — the canonical form |
+| BT | `dot` / `dot-console` | Tree drawing (dot, png, svg, pdf) |
 
 The BT `python` target covers the coordination core, including the guard
 subset (`failure-if`/`success-if` preconditions and
