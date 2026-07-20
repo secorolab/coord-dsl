@@ -203,6 +203,22 @@ class _FSMEvent(py_trees.behaviour.Behaviour):
 {% endif %}
 
 
+# The model each declared behaviour was generated from.
+BEHAVIOUR_URIS: dict[str, str] = {
+{% for behaviour in behaviours %}
+    "{{ behaviour.name }}": "{{ behaviour.uri }}",
+{% endfor %}
+}
+
+
+def _uri(node, uri):
+    """Tag a node with the URI of the model node it was generated from, so a running
+    tree can be traced back to the model (names alone are ambiguous -- one behaviour
+    is used at many places in a tree)."""
+    node.model_uri = uri
+    return node
+
+
 def create_tree(runtime) -> py_trees.behaviour.Behaviour:
     """Build the '{{ tree_name }}' tree bound to ``runtime`` and return its root."""
     return {{ tree_expr | indent(4) }}

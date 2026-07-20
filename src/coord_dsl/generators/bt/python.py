@@ -251,7 +251,10 @@ def _render(g, node, scope=ROOT_SCOPE, expanding=()):
     expr = _render_node(g, node, scope, expanding)
     if next(g.objects(node, NS_BT.guard), None) is not None:
         expr = _guard_wrap(g, node, expr, _name(g, node, "guarded"), scope)
-    return expr
+    # Carry the model node's URI onto the built behaviour: a sub-tree is expanded per
+    # instance and one leaf is used in many places, so the name alone cannot say which
+    # part of the model a ticking node came from.
+    return f"_uri({expr}, {str(node)!r})"
 
 
 def _render_node(g, node, scope=ROOT_SCOPE, expanding=()):

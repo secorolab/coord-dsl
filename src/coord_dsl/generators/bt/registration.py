@@ -123,6 +123,11 @@ def _template(name):
     ).get_template(name)
 
 
+def beh_uri(model, behaviour):
+    """The declared behaviour's URI in the model graph."""
+    return f"{model.main_tree.ns.uri}behaviour-{behaviour.name}"
+
+
 def _behaviours(model, graph):
     evented = evented_behaviours(graph)
     behaviours = []
@@ -141,7 +146,8 @@ def _behaviours(model, graph):
                 for event in ("start_event", "end_event")
                 if event not in {port["name"] for port in ports}
             )
-        behaviours.append({"name": behaviour.name, "kind": behaviour.kind, "method": method, "ports": ports})
+        behaviours.append({"name": behaviour.name, "kind": behaviour.kind, "method": method,
+                           "ports": ports, "uri": str(beh_uri(model, behaviour))})
     return behaviours
 
 

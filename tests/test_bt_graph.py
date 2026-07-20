@@ -59,6 +59,31 @@ class BtGraphTest(unittest.TestCase):
         self.assertIn(Namespace("https://secorolab.github.io/models/coordination/bt/warehouse-pick/")
                       .warehouse_pick, trees)
 
+    def test_model_uris_survive_into_every_target(self):
+        """A ticking node must be traceable back to the model node it came from:
+        names repeat across a tree, so only the URI identifies it."""
+        model = bt_metamodel().model_from_file(str(MODELS / "bt" / "py_pick" / "py_pick.btree"))
+        graph, _, root_ref = get_bt_graph(model)
+        node = "https://secorolab.github.io/models/coordination/bt/py-pick/py_pick-root-0"
+
+        # XML: carried as a port on the node types we register. BT.CPP rejects any
+        # attribute a node type does not declare, so its own composites carry none.
+        xml = gen_bt_xml(graph, root_ref)
+        self.assertIn(f'model_uri="{node}"', xml)
+        self.assertNotIn("<Sequence model_uri", xml)
+        # py_trees: tagged onto the built behaviour
+        self.assertIn(f"_uri(_FSMEvent('right_arm.PICK'", render_tree(graph, root_ref))
+        self.assertIn(f"'{node}')", render_tree(graph, root_ref))
+
+        with TemporaryDirectory() as directory:
+            hpp, py = Path(directory) / "t.hpp", Path(directory) / "t.py"
+            gen_bt_cpp_file(None, model, hpp, False, False)
+            gen_bt_python_file(None, model, py, False, False)
+            # and each declared behaviour maps back to its own URI in both runtimes
+            self.assertIn("BEHAVIOUR_URIS", hpp.read_text())
+            self.assertIn("model_uri(const BT::TreeNode& node)", hpp.read_text())
+            self.assertIn("BEHAVIOUR_URIS: dict[str, str]", py.read_text())
+
     def test_generates_btcpp_header(self):
         model = bt_metamodel().model_from_file(str(MODELS / "bt" / "warehouse_pick" / "fetch_and_place.btree"))
         with TemporaryDirectory() as directory:
@@ -166,7 +191,7 @@ class BtGraphTest(unittest.TestCase):
             xml = xml_out.read_text()
             header = hpp_out.read_text()
 
-        self.assertIn('<FSMEvent fsm="right_arm" event="PICK" await="PICK_DONE" await_kind="event" />', xml)
+        self.assertIn('<FSMEvent fsm="right_arm" event="PICK" await="PICK_DONE" await_kind="event"', xml)
         self.assertIn('#include "left_arm.hpp"', header)
         self.assertIn("class FSMEventNode : public BT::StatefulActionNode", header)
         self.assertIn("virtual void step_left_arm(struct fsm_nbx* fsm) = 0;", header)

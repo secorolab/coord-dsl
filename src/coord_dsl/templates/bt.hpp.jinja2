@@ -16,6 +16,23 @@
 {% endif %}
 
 namespace {{ namespace }} {
+
+// The model each declared behaviour was generated from. A *node's* URI travels in the
+// tree XML as `model_uri`, readable at run time via `node.config().other_attributes`.
+inline const std::map<std::string, std::string> BEHAVIOUR_URIS = {
+{% for behaviour in behaviours %}
+    {"{{ behaviour.name }}", "{{ behaviour.uri }}"},
+{% endfor %}
+};
+
+/// The model node a ticking node came from. Generated leaves and `send`/`await` nodes
+/// carry it as a port; BT.CPP's own composites and decorators cannot, since it rejects
+/// any attribute that is not in a node type's providedPorts().
+inline std::string model_uri(const BT::TreeNode& node) {
+  std::string uri;
+  return node.getInput("model_uri", uri) ? uri : std::string{};
+}
+
 class {{ runtime_class }} {
  public:
 {% if fsm_instances %}
@@ -121,7 +138,8 @@ class FSMEventNode : public BT::StatefulActionNode {
   static BT::PortsList providedPorts() {
     return {BT::InputPort<std::string>("fsm"),        BT::InputPort<std::string>("event"),
             BT::InputPort<std::string>("await"),      BT::InputPort<std::string>("await_kind"),
-            BT::InputPort<std::string>("on_fail"),    BT::InputPort<std::string>("on_fail_kind")};
+            BT::InputPort<std::string>("on_fail"),    BT::InputPort<std::string>("on_fail_kind"),
+            BT::InputPort<std::string>("model_uri")};
   }
 
   BT::NodeStatus onStart() override {
@@ -178,12 +196,13 @@ inline void register_nodes(BT::BehaviorTreeFactory& factory, {{ runtime_class }}
 {% for behaviour in behaviours %}
   factory.registerSimple{{ "Action" if behaviour.kind == "action" else "Condition" }}(
       "{{ behaviour.name }}",
-      [&runtime](BT::TreeNode& node) { return runtime.{{ behaviour.method }}(node); }{% if behaviour.ports %},
+      [&runtime](BT::TreeNode& node) { return runtime.{{ behaviour.method }}(node); },
       {
 {% for port in behaviour.ports %}
           BT::{% if port.direction == "in" %}InputPort{% elif port.direction == "out" %}OutputPort{% else %}BidirectionalPort{% endif %}("{{ port.name }}"),
 {% endfor %}
-      }{% endif %});
+          BT::InputPort<std::string>("model_uri"),
+      });
 {% endfor %}
 {% if fsm_instances %}
   factory.registerNodeType<FSMEventNode>("FSMEvent", &runtime);

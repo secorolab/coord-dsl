@@ -175,6 +175,7 @@ def _render(g, node):
             attrs["on_fail"] = split_uri(fail)[1]
             attrs["on_fail_kind"] = str(g.value(node, NS_BT["fail-kind"]))
         el = Element("FSMEvent", attrs)
+        el.set("model_uri", str(node))
         _add_bindings(g, node, el)
         _add_common(g, node, el)
     elif NS_BT.Leaf in types:
@@ -183,6 +184,8 @@ def _render(g, node):
         el = Element(BUILTIN_TAG.get(name, name))
         _add_bindings(g, node, el)
         _add_common(g, node, el)
+        if name not in BUILTIN_TAG:
+            el.set("model_uri", str(node))
         for key, attr in (("start-event", "start_event"), ("end-event", "end_event")):
             ev = g.value(node, NS_BT[key])
             if ev is not None:
