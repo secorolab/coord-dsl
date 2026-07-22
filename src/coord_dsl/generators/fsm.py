@@ -5,78 +5,9 @@
 from jinja2 import Environment, FileSystemLoader
 from os.path import basename
 from pathlib import Path
-from rdflib import Graph, Namespace, Literal, RDF, URIRef
+from rdflib import Graph, Namespace, URIRef
 from rdf_utils.namespace import URL_SECORO_MM
 from rdf_utils.naming import get_valid_var_name
-from coord_dsl.generators.fsm.classes import FSM
-
-
-def get_fsm_graph(model) -> tuple[Graph, dict, URIRef]:
-    fsm = getattr(model, "fsm", None)
-    assert isinstance(fsm, FSM), "Model does not contain an FSM definition"
-
-    URI_MM_FSM = f"{URL_SECORO_MM}/behaviour/fsm#"
-    URI_MM_EL = f"{URL_SECORO_MM}/behaviour/event_loop#"
-
-    NS_FSM = Namespace(URI_MM_FSM)
-    NS_EL = Namespace(URI_MM_EL)
-
-    g = Graph()
-    g.bind("fsm", NS_FSM)
-    g.bind("el", NS_EL)
-
-    NS_MODEL = Namespace(fsm.namespace)
-    g.bind(fsm.ns_prefix, NS_MODEL)
-
-    assert fsm.uri is not None, "FSM must have a URI"
-
-    g.add((fsm.uri, RDF.type, NS_FSM.FSM))
-    g.add((fsm.uri, NS_FSM.name, Literal(fsm.name)))
-    if fsm.description:
-        g.add((fsm.uri, NS_FSM.description, Literal(fsm.description)))
-
-    g.add((fsm.uri, NS_FSM["start-state"], URIRef(fsm.start_state.uri)))
-    g.add((fsm.uri, NS_FSM["end-state"], URIRef(fsm.end_state.uri)))
-    g.add((fsm.uri, NS_FSM["current-state"], URIRef(fsm.start_state.uri)))
-
-    for state in fsm.states:
-        g.add((URIRef(state.uri), RDF.type, NS_FSM.State))
-        g.add((fsm.uri, NS_FSM.states, URIRef(state.uri)))
-
-    for event in fsm.events:
-        g.add((URIRef(event.uri), RDF.type, NS_EL.Event))
-        g.add((fsm.uri, NS_FSM.events, URIRef(event.uri)))
-
-    for transition in fsm.transitions:
-        g.add((URIRef(transition.uri), RDF.type, NS_FSM.Transition))
-        g.add((fsm.uri, NS_FSM.transitions, URIRef(transition.uri)))
-
-        from_state = transition.from_state.uri
-        to_state = transition.to_state.uri
-
-        g.add((URIRef(transition.uri), NS_FSM["transition-from"], URIRef(from_state)))
-        g.add((URIRef(transition.uri), NS_FSM["transition-to"], URIRef(to_state)))
-
-    for reaction in fsm.reactions:
-        g.add((URIRef(reaction.uri), RDF.type, NS_FSM.Reaction))
-        g.add((fsm.uri, NS_FSM.reactions, URIRef(reaction.uri)))
-
-        when = reaction.when.uri
-        do = reaction.do.uri
-        fires = [f.event.uri for f in reaction.fires if f.event is not None]
-
-        g.add((URIRef(reaction.uri), NS_FSM["when-event"], URIRef(when)))
-        g.add((URIRef(reaction.uri), NS_FSM["do-transition"], URIRef(do)))
-        for event_uri in fires:
-            g.add((URIRef(reaction.uri), NS_FSM["fires-events"], URIRef(event_uri)))
-
-    # jsonld context
-    context = {
-        "fsm": URI_MM_FSM,
-        "el": URI_MM_EL,
-        fsm.ns_prefix: NS_MODEL,
-    }
-    return g, context, fsm.uri
 
 
 def local_name(uri: str) -> str:
@@ -190,7 +121,7 @@ def gen_cpp_header(ir: dict):
     print(f"Generating C code for FSM: {ir['name']}")
 
     # get module path
-    module_path = Path(__file__).parent.parent.parent
+    module_path = Path(__file__).parent.parent
     env = Environment(loader=FileSystemLoader(module_path / "templates"))
     template = env.get_template("fsm.hpp.jinja2")
 
@@ -209,7 +140,7 @@ def gen_python_code(ir: dict):
     print(f"Generating Python code for FSM: {ir['name']}")
 
     # get module path
-    module_path = Path(__file__).parent.parent.parent
+    module_path = Path(__file__).parent.parent
     env = Environment(loader=FileSystemLoader(module_path / "templates"))
     template = env.get_template("fsm.py.jinja2")
 

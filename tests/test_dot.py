@@ -10,8 +10,8 @@ from tempfile import TemporaryDirectory
 
 from coord_dsl.generators.common import write_dot
 from coord_dsl.generators.dot import fsm_dot
-from coord_dsl.generators.fsm.graph import get_fsm_graph
-from coord_dsl.generators.fsm.registration import fsm_metamodel
+from coord_dsl.rdf.fsm import get_fsm_graph
+from coord_dsl.registration import fsm_metamodel
 
 
 class FsmDotTest(unittest.TestCase):

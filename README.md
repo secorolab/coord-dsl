@@ -11,6 +11,14 @@ pip install -e .
 
 ## Model
 
+The FSM design follows Prof. Herman Bruyninckx's
+[Composable and Explainable Systems of Systems](https://robmosys.pages.gitlab.kuleuven.be/composable-and-explainable-systems-of-systems.pdf):
+events represent observable changes, states represent stateful behaviours,
+transitions connect states, and event reactions select transitions and may
+produce further events. The generated machine is intended to run one step per
+control-loop iteration; event production and consumption use the bundled event
+loop.
+
 FSM models use the `.fsm` extension. They declare states, events, transitions,
 and ordered reactions. References to declarations are enclosed in angle
 brackets.

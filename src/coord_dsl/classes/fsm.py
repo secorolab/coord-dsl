@@ -3,7 +3,7 @@
 # Author: Vamsi Kalagaturu
 
 from typing import Optional
-from coord_dsl.generators.common import IHasNamespaceDeclare, NamedNamespaceObject
+from coord_dsl.classes.common import IHasNamespaceDeclare, NamedNamespaceObject
 
 
 class State(NamedNamespaceObject):

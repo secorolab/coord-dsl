@@ -10,8 +10,8 @@ from tempfile import TemporaryDirectory
 from rdflib import Graph, Namespace
 from rdflib.namespace import PROV, RDF
 
-from coord_dsl.generators.fsm.registration import fsm_metamodel, gen_python
 from coord_dsl.generators.provenance import DOCUMENT_NAME, source_paths
+from coord_dsl.registration import fsm_metamodel, gen_python
 
 CDPROV = Namespace("https://secorolab.github.io/coord-dsl/provenance/")
 MODEL = Path(__file__).resolve().parents[1] / "examples" / "models" / "fsm" / "example.fsm"
