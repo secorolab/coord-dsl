@@ -1,1 +1,4 @@
 build
+/ex_fsm.*
+/example.png
+/provenance.ld.json
