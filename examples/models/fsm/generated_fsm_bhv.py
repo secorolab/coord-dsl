@@ -31,6 +31,8 @@ class UserData:
     current_time: float
     state_duration: float
     compile: bool = True
+    cycles: int = 0            # idle visits so far
+    max_cycles: int = 0        # 0 keeps the machine running until interrupted
     transition_time: float | None = None
 
     def __post_init__(self):
@@ -46,6 +48,11 @@ def generic_on_end(fsm: FSMData, ud: UserData, end_events: list[EventID]):
 
 
 def idle_on_end(fsm: FSMData, ud: UserData):
+    ud.cycles += 1
+    if ud.max_cycles and ud.cycles >= ud.max_cycles:
+        # leave through the machine's end state rather than being killed
+        generic_on_end(fsm, ud, [EventID.E_EXIT])
+        return
     if ud.compile:
         generic_on_end(fsm, ud, [EventID.E_IDLE_EXIT_COMPILE])
     else:
@@ -88,7 +95,7 @@ def fsm_behavior(fsm: FSMData, ud: UserData, bhv_data: dict):
         bhv_data_cs["on_end"](fsm, ud)
 
 
-def main(state_duration_sec: float):
+def main(state_duration_sec: float, max_cycles: int = 0):
     signal.signal(signal.SIGINT, signal_handler)
 
     print("Starting generated FSM example. Press Ctrl+C to exit.\n")
@@ -124,7 +131,7 @@ def main(state_duration_sec: float):
     }
 
     now = time.time()
-    ud = UserData(current_time=now, state_duration=state_duration_sec)
+    ud = UserData(current_time=now, state_duration=state_duration_sec, max_cycles=max_cycles)
     loop_timeout = now + LOOP_DURATION
     while True:
         if fsm.current_state_index == StateID.S_EXIT:
@@ -161,5 +168,12 @@ if __name__ == "__main__":
         default=0.5,
         help="Duration in seconds to sleep in each state",
     )
+    parser.add_argument(
+        "--cycles",
+        "-c",
+        type=int,
+        default=0,
+        help="Idle visits before firing e-exit; 0 runs until Ctrl+C",
+    )
     args = parser.parse_args()
-    main(args.state_duration)
+    main(args.state_duration, args.cycles)

@@ -1,161 +1,64 @@
 # coord-dsl
 
-Domain-Specific Languages (DSLs) for modelling coordination of (robot) behaviours.
+A [textX](https://textx.github.io/textX/) DSL for event-driven finite state
+machines, with Python, C++, RDF, and graphviz generators.
 
 ## Installation
 
-The library can be installed as a Python package, e.g., with `pip`:
-
 ```bash
-pip install "coord_dsl"
+pip install -e .
 ```
 
-## Coordination Models
+## Model
 
-### Finite State Machines (FSMs)
+FSM models use the `.fsm` extension. They declare states, events, transitions,
+and ordered reactions. References to declarations are enclosed in angle
+brackets.
 
-We include a [textX](https://textx.github.io/textX/) DSL for representing _event-driven_ finite state machines (FSMs).
-This design is described in Prof. Herman Bruyninckx's [online book](https://robmosys.pages.gitlab.kuleuven.be/composable-and-explainable-systems-of-systems.pdf).
-Specifically, the design allows specifying FSMs as a data type consisting of:
+```text
+ns ex = "https://example.com/fsm/"
 
-* _Events_, occurence or monitored state change of the system
-* _States_, which represent stateful behaviours of a system
-* _Transitions_ from one _State_ to another
-* _Event Reactions_, which induce _Transitions_ when trigged by an _Event_
-  (or event compositions, but not realized here).
-
-Our implementations of this FSM design are meant to work with control loops, where in each loop the FSM step function
-is called to induce state transitions.
-Production and consumption of events are handled with a simple event loop implementation.
-
-#### Example model
-
-textX FSM models should be defined as a `.fsm` file. A simple example is listed below. More complete examples can be
-found in the [`models/fsm`](examples/models/fsm/) directory.
-
-```yaml
-NAME: example_fsm
-
-DESCRIPTION: Example FSM
-
-STATES: S_START,S_STATE1,S_STATE2,S_EXIT
-
-START_STATE: S_START
-CURRENT_STATE: S_START
-END_STATE: S_EXIT
-
-EVENTS: E_EVENT1,E_EVENT2,E_STEP,E_EVENT3,E_EVENT4
-
-TRANSITIONS:
-    T_START_STATE1:
-        FROM: @S_START
-        TO: @S_STATE1
-    T_STATE1_STATE2:
-        FROM: @S_STATE1
-        TO: @S_STATE2
-    T_STATE2_STATE2:
-        FROM: @S_STATE2
-        TO: @S_STATE2
-    T_STATE2_EXIT:
-        FROM: @S_STATE2
-        TO: @S_EXIT
-
-REACTIONS:
-    R_EVENT1:
-        WHEN: @E_EVENT1
-        DO: @T_START_STATE1
-        FIRES: @E_EVENT2
-    R_EVENT2:
-        WHEN: @E_EVENT2
-        DO: @T_STATE1_STATE2
-    R_STEP:
-        WHEN: @E_STEP
-        DO: @T_STATE2_STATE2
-        FIRES: @E_EVENT3,@E_EVENT4
-    R_EVENT3:
-        WHEN: @E_EVENT3
-        DO: @T_STATE2_EXIT
+fsm (ns=ex) example_fsm {
+    description: "Example FSM"
+    states { S_START, S_RUNNING, S_EXIT }
+    events { E_START, E_STOP }
+    start: <S_START>
+    end: <S_EXIT>
+    transitions {
+        T_START { from: <S_START>, to: <S_RUNNING> },
+        T_STOP  { from: <S_RUNNING>, to: <S_EXIT> }
+    }
+    reactions {
+        R_START { when: <E_START>, do: <T_START> },
+        R_STOP  { when: <E_STOP>, do: <T_STOP> }
+    }
+}
 ```
 
-#### Graph requirements
+Reactions are ordered: each step applies the first reaction whose event is
+present and whose transition starts at the current state. A namespace gives
+the FSM and each of its parts a stable URI.
 
-* A `namespace` is required for the FSM model, when targeting a `graph` output.
-* Below are the ways to specify the `namespace` for the graph output:
-  ```yaml
-  ns hello="https://example.com/fsm"
-
-  NAME: (ns=hello) example-fsm
-  ```
-
-  or
-
-  ```yaml
-  ns hello="https://example.com/fsm"
-
-  NAME: hello.example-fsm
-
-##### States
-
-* States represent the different behaviors of an activity.
-* Each state is represented by a unique identifier.
-* The `START_STATE` and `END_STATE` variables define the initial and final states of the FSM.
-* The `CURRENT_STATE` variable defines where the FSM starts from.
-
-    > **_NOTE:_**
-    > The included event loop implementation can only work with states that spans at least 2 "steps."
-    > Function calls that does not span 2 steps should not be in a separate state.
-    > For more details see commit [coord-dsl@5d983e2](https://github.com/secorolab/coord-dsl/commit/5d983e2011957c373ca829f538c3baaa79266308).
-
-##### Events
-
-[Events](https://en.wikipedia.org/wiki/Event_(computing)) represents "a detectable occurence" or a
-"monitored change in state." Here, events trigger "reactions" in the form of state transitions.
-
-##### Transitions
-
-* Transitions section defines the `transition` `from` one state `to` another.
-* Each `transition` is represented by a unique identifier.
-* The `FROM` and `TO` keywords define the source and destination states (`@` is used to reference the state by its identifier).
-* A state can have multiple transitions leading to different states or the same state.
-
-##### Reactions
-
-* Reactions represents the decision making policy of the FSM for changing its behavior.
-* It defines a list of events that the FSM can _react_ to with `WHEN` keyword, each `event` associated with a unique reaction.
-* The `DO` keyword defines the action to be taken when the `event` occurs.
-* The `FIRES` keyword defines the `set` of events (or none) that are fired as a result of the transition.
-
-    > **_NOTE:_**
-    > The order of the `REACTIONS` section is important. The first reaction that matches the `event` and that satisfies
-    > the `transition` will be executed. If multiple reactions match, only the first one will be executed.
-
-#### Code Generation
+## Generation
 
 ```bash
 textx generate example.fsm --target cpp -o model.hpp
 textx generate example.fsm --target python -o model.py
 textx generate example.fsm --target graph --format json-ld --autocompact
-textx generate example.fsm --target console --format ttl --autocompact
+textx generate example.fsm --target console --format ttl
+textx generate example.fsm --target dot --format png
 ```
 
-* Generates a C++ header file with the data structures required for the FSM, along with a sample implementation code.
-* The header file can be included in a C++ program.
-* If the `-o` is not specified, the generated file will be saved in the same directory as the input file with
-  the same name and `.hpp` extension.
-* Available targets:
-  - `cpp`: A C++ header file.
-  - `python`: A Python module.
-  - `graph`: A graph representation of the FSM in formats [json-ld, ttl, xml].
-  - `console`: Console output.
-* Available formats for graph and console targets through the `--format` option:
-  - `json-ld`: JSON-LD format.
-  - `ttl`: Turtle format.
-  - `xml`: XML format.
-* The `--autocompact` option can be used to automatically compact the generated graph using the namespace defined in the FSM model.
+Available targets:
 
-#### Execution
+- `cpp`: C++ header for the [coord2b](https://github.com/rosym-project/coord2b) runtime.
+- `python`: Python module for the bundled `coord_dsl` runtime.
+- `graph` / `console`: RDF in JSON-LD, Turtle, or XML.
+- `dot` / `dot-console`: graphviz source or a PNG, SVG, or PDF rendering.
 
-* The generated header file is dependent on the [coord2b](https://github.com/rosym-project/coord2b) library.
-* The [traffic_lights.c](https://github.com/rosym-project/coord2b/blob/master/src/example/traffic_lights.c) example
-  is a good starting point to understand how to use the generated data structures.
-* [examples/models/fsm](examples/models/fsm/) contains examples for executing [python](examples/models/fsm/generated_fsm_bgv.py) and [cpp](examples/models/fsm/test_fsm.cpp) code generated from FSM models.
+Generated code includes `FSM_URI` and URI tables for states, events,
+transitions, and reactions. File generators also update a
+`provenance.ld.json` document beside their output.
+
+See [examples/models/fsm](examples/models/fsm/) for a complete model and Python
+and C++ controllers.

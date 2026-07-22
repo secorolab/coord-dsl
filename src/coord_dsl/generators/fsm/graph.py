@@ -1,10 +1,14 @@
+# SPDX-License-Identifier: MPL-2.0
+# SPDX-FileCopyrightText: 2026 SECORO AG (secoro.uni-bremen.de)
+# Author: Vamsi Kalagaturu
+
 from jinja2 import Environment, FileSystemLoader
 from os.path import basename
 from pathlib import Path
 from rdflib import Graph, Namespace, Literal, RDF, URIRef
 from rdf_utils.namespace import URL_SECORO_MM
 from rdf_utils.naming import get_valid_var_name
-from coord_dsl.generators.classes import FSM
+from coord_dsl.generators.fsm.classes import FSM
 
 
 def get_fsm_graph(model) -> tuple[Graph, dict, URIRef]:
@@ -28,7 +32,7 @@ def get_fsm_graph(model) -> tuple[Graph, dict, URIRef]:
 
     g.add((fsm.uri, RDF.type, NS_FSM.FSM))
     g.add((fsm.uri, NS_FSM.name, Literal(fsm.name)))
-    if fsm.description is not None:
+    if fsm.description:
         g.add((fsm.uri, NS_FSM.description, Literal(fsm.description)))
 
     g.add((fsm.uri, NS_FSM["start-state"], URIRef(fsm.start_state.uri)))
@@ -165,6 +169,7 @@ def gen_json(g: Graph, fsm_ref: URIRef) -> dict:
 
     result = {
         "name": name,
+        "uri": str(fsm_ref),
         "description": description,
         "start_state": start_state,
         "end_state": end_state,
@@ -185,7 +190,7 @@ def gen_cpp_header(ir: dict):
     print(f"Generating C code for FSM: {ir['name']}")
 
     # get module path
-    module_path = Path(__file__).parent.parent
+    module_path = Path(__file__).parent.parent.parent
     env = Environment(loader=FileSystemLoader(module_path / "templates"))
     template = env.get_template("fsm.hpp.jinja2")
 
@@ -204,7 +209,7 @@ def gen_python_code(ir: dict):
     print(f"Generating Python code for FSM: {ir['name']}")
 
     # get module path
-    module_path = Path(__file__).parent.parent
+    module_path = Path(__file__).parent.parent.parent
     env = Environment(loader=FileSystemLoader(module_path / "templates"))
     template = env.get_template("fsm.py.jinja2")
 

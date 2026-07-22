@@ -1,7 +1,43 @@
 # SPDX-License-Identifier: MPL-2.0
 # Author: Minh Nguyen
 
+import shutil
+import subprocess
+from pathlib import Path
+
 from rdflib import Namespace, URIRef
+
+
+def clang_format_file(path):
+    """Format a generated C++ file in place using the nearest `.clang-format`.
+
+    No-op when clang-format is unavailable or no style file is found upward
+    (e.g. output written to a temp dir), so callers stay side-effect-free there.
+    """
+    path = Path(path)
+    style = next(
+        (p / ".clang-format" for p in path.resolve().parents if (p / ".clang-format").is_file()),
+        None,
+    )
+    if style is None or shutil.which("clang-format") is None:
+        return
+    subprocess.run(
+        ["clang-format", "-i", f"--style=file:{style}", "-fallback-style=none", str(path)],
+        check=False,
+    )
+
+
+def write_dot(dot_source, output_path, img_format):
+    """Write a graphviz graph, rendering it to an image unless the format is `dot`."""
+    if img_format == "dot":
+        Path(output_path).write_text(dot_source)
+        return
+    if shutil.which("dot") is None:
+        raise ValueError(f"graphviz is needed to write {img_format!r}: no 'dot' on PATH")
+    subprocess.run(
+        ["dot", f"-T{img_format}", "-o", str(output_path)],
+        input=dot_source, text=True, check=True,
+    )
 
 
 class IHasParent(object):

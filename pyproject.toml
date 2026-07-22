@@ -6,10 +6,18 @@ authors = [{ name = "", email = "vamsi.kalagautur@uni-bremen.de" }]
 license = { text = "MIT" }
 keywords = [""]
 readme = "README.md"
-requires-python = ">=3.7"
+requires-python = ">=3.10"
 dependencies = [
     "textX>=4.1.0",
-    "textx_ls_core"
+    "textx_ls_core",
+    "jinja2",
+    "rdflib",
+]
+
+[project.optional-dependencies]
+docs = [
+    "sphinx>=7",
+    "furo",
 ]
 
 [project.urls]
@@ -29,14 +37,15 @@ where = ["src"]
 ]
 
 [project.entry-points."textx_languages"]
-"fsm" = "coord_dsl.generators.registration:fsm_lang"
+"fsm" = "coord_dsl.generators.fsm.registration:fsm_lang"
 
 [project.entry-points."textx_generators"]
-"fsm_graph_console" = "coord_dsl.generators.registration:fsm_console_gen"
-"fsm_graph_file" = "coord_dsl.generators.registration:fsm_file_gen"
-"fsm_cpp" = "coord_dsl.generators.registration:fsm_cpp_gen"
-"fsm_python" = "coord_dsl.generators.registration:fsm_python_gen"
+"fsm_graph_console" = "coord_dsl.generators.fsm.registration:fsm_console_gen"
+"fsm_graph_file" = "coord_dsl.generators.fsm.registration:fsm_file_gen"
+"fsm_dot" = "coord_dsl.generators.fsm.registration:fsm_dot_gen"
+"fsm_dot_console" = "coord_dsl.generators.fsm.registration:fsm_dot_console_gen"
+"fsm_cpp" = "coord_dsl.generators.fsm.registration:fsm_cpp_gen"
+"fsm_python" = "coord_dsl.generators.fsm.registration:fsm_python_gen"
 
 [ruff]
 line-length = 100
-
