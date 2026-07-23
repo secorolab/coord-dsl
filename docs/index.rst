@@ -13,7 +13,7 @@ From one model you can generate:
    * - Target
      - Artifact
    * - ``cpp`` / ``python``
-     - A self-contained state machine and step function
+     - State-machine data for the corresponding runtime
    * - ``graph`` / ``console``
      - JSON-LD, Turtle, or XML RDF graph
    * - ``dot`` / ``dot-console``

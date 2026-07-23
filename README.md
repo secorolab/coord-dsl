@@ -13,15 +13,22 @@ pip install -e .
 
 The FSM design follows Prof. Herman Bruyninckx's
 [Composable and Explainable Systems of Systems](https://robmosys.pages.gitlab.kuleuven.be/composable-and-explainable-systems-of-systems.pdf):
-events represent observable changes, states represent stateful behaviours,
-transitions connect states, and event reactions select transitions and may
-produce further events. The generated machine is intended to run one step per
-control-loop iteration; event production and consumption use the bundled event
-loop.
+an FSM is represented as a pure data structure. A `.fsm` file contains:
 
-FSM models use the `.fsm` extension. They declare states, events, transitions,
-and ordered reactions. References to declarations are enclosed in angle
-brackets.
+- **states**: the stateful behaviours, including a `start` and an `end` state;
+- **events**: occurrences or monitored state changes to which the machine reacts;
+- **transitions**: directed `from`/`to` relationships between states; and
+- **reactions**: the policy relating an event to a transition and, optionally,
+  further events to fire.
+
+Each reaction matches one event. Event compositions from the broader FSM design
+are not implemented.
+
+The control loop and behaviour implementations are separate from the model.
+The Python `coord_dsl` runtime and C++
+[coord2b](https://github.com/rosym-project/coord2b) runtime apply reactions and
+provide their event loops. References to model declarations are enclosed in
+angle brackets.
 
 ```text
 ns ex = "https://example.com/fsm/"
@@ -52,7 +59,7 @@ the FSM and each of its parts a stable URI.
 ```bash
 textx generate example.fsm --target cpp -o model.hpp
 textx generate example.fsm --target python -o model.py
-textx generate example.fsm --target graph --format json-ld --autocompact
+textx generate example.fsm --target graph --format json-ld --autocompact  # writes example_fsm.ld.json beside example.fsm
 textx generate example.fsm --target console --format ttl
 textx generate example.fsm --target dot --format png
 ```
@@ -63,6 +70,10 @@ Available targets:
 - `python`: Python module for the bundled `coord_dsl` runtime.
 - `graph` / `console`: RDF in JSON-LD, Turtle, or XML.
 - `dot` / `dot-console`: graphviz source or a PNG, SVG, or PDF rendering.
+
+The RDF generators call `rdflib.Graph.serialize` with `format` from `--format`
+(default: `json-ld`), the model's generated JSON-LD `context`, `indent=2`, and
+`auto_compact=True` when `--autocompact` is present (`False` otherwise).
 
 Generated code includes `FSM_URI` and URI tables for states, events,
 transitions, and reactions. File generators also update a

@@ -9,13 +9,20 @@ semantics; only the runtime language differs.
 Modelling
 ---------
 
-An FSM is a ``.fsm`` file. It declares:
+Following the FSM design in Prof. Herman Bruyninckx's `Composable and
+Explainable Systems of Systems`_, an FSM is represented as a pure data
+structure. A ``.fsm`` file contains:
 
-* **states** — the stateful behaviours; a ``start`` and an ``end`` state.
-* **events** — occurrences the machine reacts to.
-* **transitions** — a directed ``from``/``to`` edge between two states.
-* **reactions** — the policy: ``when`` an event fires, ``do`` a transition, and
-  optionally ``fires`` further events.
+* **states** — the stateful behaviours, including a ``start`` and an ``end`` state;
+* **events** — occurrences or monitored state changes to which the machine reacts;
+* **transitions** — directed ``from``/``to`` relationships between states; and
+* **reactions** — the policy relating an event to a transition and, optionally,
+  further events to fire.
+
+Each reaction matches one event. Event compositions from the broader FSM design
+are not implemented.
+
+The control loop and behaviour implementations are separate from the model.
 
 Each of those is a ``{ }`` scope whose entries are separated by commas.
 Declarations are bare names; every *reference* to one is written in angle
@@ -30,8 +37,8 @@ Two rules matter:
 * **Reactions are ordered.** On each step the *first* reaction whose event is
   present **and** whose transition starts from the current state is taken; the
   rest are ignored that step.
-* A ``namespace`` (``ns``) is required for graph output and gives every state,
-  event and transition a stable URI.
+* During graph generation, the ``namespace`` (``ns``) is combined with the FSM
+  and declaration names to create their full URIs.
 
 The event-loop model (shared by Python and C++)
 -----------------------------------------------
@@ -56,7 +63,9 @@ four operations:
 
 So an event you produce this tick becomes *current* — and drives a transition —
 only after the next ``reconfig``. This one-tick pipeline is identical in both
-languages; the generated FSM code is only data + ``fsm_step``, never a loop.
+languages. Generated code constructs the model data; the runtime supplies
+the step operation — ``coord_dsl.fsm.fsm_step`` in Python and ``fsm_step_nbx``
+from coord2b_ in C++ — while user code supplies the behaviour and control loop.
 
 Generate
 --------
@@ -65,8 +74,13 @@ Generate
 
    textx generate example.fsm --target python -o ex_fsm.py
    textx generate example.fsm --target cpp    -o ex_fsm.hpp
-   textx generate example.fsm --target graph --format json-ld --autocompact
+   textx generate example.fsm --target graph --format json-ld --autocompact  # writes ex_fsm.ld.json beside example.fsm
    textx generate example.fsm --target dot --format png     # a picture of the machine
+
+The ``graph`` and ``console`` targets call ``rdflib.Graph.serialize`` with
+``format`` from ``--format`` (default: ``json-ld``), the model's generated
+JSON-LD ``context``, ``indent=2``, and ``auto_compact=True`` when
+``--autocompact`` is present (``False`` otherwise).
 
 The code targets emit ``create_fsm()``, ``destroy_fsm()`` (C++), the
 state/event/transition/reaction enums, and the IRI tables below. No control loop —
@@ -164,8 +178,8 @@ Python one-to-one (``produce_event`` / ``consume_event`` /
    :caption: examples/models/fsm/test_fsm.cpp — the control loop
    :lines: 27-63
 
-``fsm->current_state_index`` and ``fsm->states[i].name`` read the live machine;
-``fsm->event_data`` holds the buffers. Build against coord2b with CMake:
+``fsm->currentStateIndex`` and ``fsm->states[i].name`` read the live machine;
+``fsm->eventData`` holds the buffers. Build against coord2b_ with CMake:
 
 .. literalinclude:: ../../examples/models/fsm/CMakeLists.txt
    :language: cmake
@@ -177,3 +191,4 @@ Python one-to-one (``produce_event`` / ``consume_event`` /
    ./build/fsm_test
 
 .. _coord2b: https://github.com/rosym-project/coord2b
+.. _Composable and Explainable Systems of Systems: https://robmosys.pages.gitlab.kuleuven.be/composable-and-explainable-systems-of-systems.pdf
