@@ -4,8 +4,9 @@
 
 from rdf_utils.namespace import URL_SECORO_MM
 from rdflib import Graph, Literal, RDF, URIRef
-from rdf_utils.models.event_loop import (
+from rdf_utils.models.vocab import (
     URI_EL_PRED_EVT_LOOP,
+    URI_EL_PRED_HAS_EVT_REACT,
     URI_EL_PRED_REF_EVT,
     URI_EL_TYPE_EVT_REACT,
 )
@@ -82,6 +83,7 @@ def get_fsm_graph(model) -> tuple[Graph, URIRef]:
     for reaction in fsm.reactions:
         graph.add((reaction.uri, RDF.type, URI_FSM_TYPE_REACTION))
         graph.add((reaction.uri, RDF.type, URI_EL_TYPE_EVT_REACT))
+        graph.add((fsm.event_loop.uri, URI_EL_PRED_HAS_EVT_REACT, reaction.uri))
         graph.add((fsm.uri, URI_FSM_PRED_REACTIONS, reaction.uri))
         graph.add((reaction.uri, URI_EL_PRED_REF_EVT, reaction.when.uri))
         graph.add((reaction.uri, URI_FSM_PRED_DO_TRANSITION, reaction.do.uri))

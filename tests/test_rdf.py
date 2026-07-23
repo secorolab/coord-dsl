@@ -6,6 +6,7 @@ from pathlib import Path
 
 from rdflib import Graph
 from rdf_utils.constraints import check_shacl_constraints
+from rdf_utils.models.event_loop import EventLoopModel
 from rdf_utils.resolver import install_resolver
 
 from coord_dsl.rdf.event_loop import URL_EVT_LOOP_SHACL, add_event_loop
@@ -34,6 +35,8 @@ class FsmRdfTest(unittest.TestCase):
         install_resolver()
         model = fsm_metamodel().model_from_file(MODEL)
         graph, _ = get_fsm_graph(model)
+        event_loop = EventLoopModel(model.fsm.event_loop.uri, graph)
+        self.assertEqual(len(event_loop.event_reactions), len(model.fsm.reactions))
 
         self.assertTrue(
             check_shacl_constraints(

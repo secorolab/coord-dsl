@@ -8,7 +8,7 @@ import subprocess
 from pathlib import Path
 
 from rdflib.namespace import split_uri
-from rdf_utils.models.event_loop import URI_EL_PRED_REF_EVT
+from rdf_utils.models.vocab import URI_EL_PRED_REF_EVT
 
 from coord_dsl.rdf.vocab import (
     URI_FSM_PRED_DO_TRANSITION,

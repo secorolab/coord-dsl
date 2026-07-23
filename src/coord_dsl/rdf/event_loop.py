@@ -2,7 +2,7 @@
 """RDF generation for event loops."""
 
 from rdflib import Graph, RDF
-from rdf_utils.models.event_loop import (
+from rdf_utils.models.vocab import (
     URI_EL_PRED_HAS_EVT,
     URI_EL_TYPE_EVT,
     URI_EL_TYPE_EVT_LOOP,

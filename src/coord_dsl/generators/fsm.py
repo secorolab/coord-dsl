@@ -6,7 +6,7 @@ from jinja2 import Environment, FileSystemLoader
 from os.path import basename
 from pathlib import Path
 from rdflib import Graph, URIRef
-from rdf_utils.models.event_loop import (
+from rdf_utils.models.vocab import (
     URI_EL_PRED_EVT_LOOP,
     URI_EL_PRED_HAS_EVT,
     URI_EL_PRED_REF_EVT,
