@@ -10,8 +10,7 @@ from textx import GeneratorDesc, LanguageDesc, metamodel_from_file
 from textx.scoping import providers as scoping_providers
 
 from coord_dsl.classes.fsm import Event, FSM, FiredEvent, Reaction, State, Transition
-from coord_dsl.generators.common import write_dot
-from coord_dsl.generators.dot import FORMATS, fsm_dot
+from coord_dsl.generators.dot import FORMATS, fsm_dot, write_dot
 from coord_dsl.generators.fsm import gen_cpp_header, gen_json, gen_python_code
 from coord_dsl.generators.provenance import record
 from coord_dsl.rdf.fsm import get_fsm_graph

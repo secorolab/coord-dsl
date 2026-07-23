@@ -8,8 +8,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from coord_dsl.generators.common import write_dot
-from coord_dsl.generators.dot import fsm_dot
+from coord_dsl.generators.dot import fsm_dot, write_dot
 from coord_dsl.rdf.fsm import get_fsm_graph
 from coord_dsl.registration import fsm_metamodel
 
