@@ -54,14 +54,14 @@ def get_fsm_graph(model) -> tuple[Graph, dict, URIRef]:
     if fsm.description:
         graph.add((fsm.uri, URI_FSM_PRED_DESCRIPTION, Literal(fsm.description)))
 
-    graph.add((fsm.uri, URI_FSM_PRED_START_STATE, URIRef(fsm.start_state.uri)))
-    graph.add((fsm.uri, URI_FSM_PRED_END_STATE, URIRef(fsm.end_state.uri)))
-    graph.add((fsm.uri, URI_FSM_PRED_CURRENT_STATE, URIRef(fsm.start_state.uri)))
+    graph.add((fsm.uri, URI_FSM_PRED_START_STATE, fsm.start_state.uri))
+    graph.add((fsm.uri, URI_FSM_PRED_END_STATE, fsm.end_state.uri))
+    graph.add((fsm.uri, URI_FSM_PRED_CURRENT_STATE, fsm.start_state.uri))
     graph.add((fsm.uri, URI_EL_PRED_EVT_LOOP, fsm.event_loop.uri))
 
     for state in fsm.states:
-        graph.add((URIRef(state.uri), RDF.type, URI_FSM_TYPE_STATE))
-        graph.add((fsm.uri, URI_FSM_PRED_STATES, URIRef(state.uri)))
+        graph.add((state.uri, RDF.type, URI_FSM_TYPE_STATE))
+        graph.add((fsm.uri, URI_FSM_PRED_STATES, state.uri))
 
     graph.add((fsm.event_loop.uri, RDF.type, URI_EL_TYPE_EVT_LOOP))
     for event in fsm.event_loop.events:
@@ -69,39 +69,35 @@ def get_fsm_graph(model) -> tuple[Graph, dict, URIRef]:
         graph.add((fsm.event_loop.uri, URI_EL_PRED_HAS_EVT, event.uri))
 
     for transition in fsm.transitions:
-        graph.add((URIRef(transition.uri), RDF.type, URI_FSM_TYPE_TRANSITION))
-        graph.add((fsm.uri, URI_FSM_PRED_TRANSITIONS, URIRef(transition.uri)))
+        graph.add((transition.uri, RDF.type, URI_FSM_TYPE_TRANSITION))
+        graph.add((fsm.uri, URI_FSM_PRED_TRANSITIONS, transition.uri))
         graph.add(
             (
-                URIRef(transition.uri),
+                transition.uri,
                 URI_FSM_PRED_TRANSITION_FROM,
-                URIRef(transition.from_state.uri),
+                transition.from_state.uri,
             )
         )
         graph.add(
             (
-                URIRef(transition.uri),
+                transition.uri,
                 URI_FSM_PRED_TRANSITION_TO,
-                URIRef(transition.to_state.uri),
+                transition.to_state.uri,
             )
         )
 
     for reaction in fsm.reactions:
-        graph.add((URIRef(reaction.uri), RDF.type, URI_FSM_TYPE_REACTION))
-        graph.add((URIRef(reaction.uri), RDF.type, URI_EL_TYPE_EVT_REACT))
-        graph.add((fsm.uri, URI_FSM_PRED_REACTIONS, URIRef(reaction.uri)))
-        graph.add(
-            (URIRef(reaction.uri), URI_EL_PRED_REF_EVT, URIRef(reaction.when.uri))
-        )
-        graph.add(
-            (URIRef(reaction.uri), URI_FSM_PRED_DO_TRANSITION, URIRef(reaction.do.uri))
-        )
+        graph.add((reaction.uri, RDF.type, URI_FSM_TYPE_REACTION))
+        graph.add((reaction.uri, RDF.type, URI_EL_TYPE_EVT_REACT))
+        graph.add((fsm.uri, URI_FSM_PRED_REACTIONS, reaction.uri))
+        graph.add((reaction.uri, URI_EL_PRED_REF_EVT, reaction.when.uri))
+        graph.add((reaction.uri, URI_FSM_PRED_DO_TRANSITION, reaction.do.uri))
         for fired_event in reaction.fired_events:
             graph.add(
                 (
-                    URIRef(reaction.uri),
+                    reaction.uri,
                     URI_FSM_PRED_FIRES_EVENTS,
-                    URIRef(fired_event.uri),
+                    fired_event.uri,
                 )
             )
 
