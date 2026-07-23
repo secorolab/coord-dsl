@@ -90,6 +90,16 @@ languages. Generated code constructs the model data; the runtime supplies
 the step operation — ``coord_dsl.fsm.fsm_step`` in Python and ``fsm_step_nbx``
 from coord2b_ in C++ — while user code supplies the behaviour and control loop.
 
+.. note::
+
+   States should span at least two control-loop steps. A function call that
+   completes within one step should not normally be modelled as a separate
+   state: an event produced during that step is unavailable until the event
+   buffers are reconfigured. Calling ``reconfig_event_buffers`` again before
+   stepping the FSM can work around this for an immediate-completion state, as
+   demonstrated in `coord-dsl@5d983e2`_, but does not remove the underlying
+   double-buffer limitation.
+
 Generate
 --------
 
@@ -216,3 +226,4 @@ Python one-to-one (``produce_event`` / ``consume_event`` /
 
 .. _coord2b: https://github.com/rosym-project/coord2b
 .. _Composable and Explainable Systems of Systems: https://robmosys.pages.gitlab.kuleuven.be/composable-and-explainable-systems-of-systems.pdf
+.. _coord-dsl@5d983e2: https://github.com/secorolab/coord-dsl/commit/5d983e2011957c373ca829f538c3baaa79266308
