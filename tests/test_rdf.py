@@ -4,11 +4,12 @@
 import unittest
 from pathlib import Path
 
+from rdflib import Graph
 from rdf_utils.constraints import check_shacl_constraints
-from rdf_utils.namespace import URL_SECORO_MM
 from rdf_utils.resolver import install_resolver
 
-from coord_dsl.rdf.fsm import get_fsm_graph
+from coord_dsl.rdf.event_loop import URL_EVT_LOOP_SHACL, add_event_loop
+from coord_dsl.rdf.fsm import URL_FSM_SHACL, get_fsm_graph
 from coord_dsl.registration import fsm_metamodel
 
 
@@ -16,6 +17,19 @@ MODEL = Path(__file__).parents[1] / "examples/models/fsm/example.fsm"
 
 
 class FsmRdfTest(unittest.TestCase):
+    def test_event_loop_conforms_to_shacl(self):
+        install_resolver()
+        model = fsm_metamodel().model_from_file(MODEL)
+        graph = Graph()
+        add_event_loop(graph, model.fsm.event_loop)
+
+        self.assertTrue(
+            check_shacl_constraints(
+                graph,
+                {URL_EVT_LOOP_SHACL: "ttl"},
+            )
+        )
+
     def test_example_conforms_to_fsm_and_event_loop_shacl(self):
         install_resolver()
         model = fsm_metamodel().model_from_file(MODEL)
@@ -25,8 +39,8 @@ class FsmRdfTest(unittest.TestCase):
             check_shacl_constraints(
                 graph,
                 {
-                    f"{URL_SECORO_MM}/behaviour/fsm.shacl.ttl": "ttl",
-                    f"{URL_SECORO_MM}/behaviour/event_loop.shacl.ttl": "ttl",
+                    URL_EVT_LOOP_SHACL: "ttl",
+                    URL_FSM_SHACL: "ttl",
                 },
             )
         )
