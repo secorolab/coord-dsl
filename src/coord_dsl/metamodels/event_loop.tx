@@ -1,0 +1,12 @@
+import base
+
+EventLoop:
+"evt" "loop" "(" "ns" "=" ns=[NamespaceDeclare|FQN] ")" name=IRI_TRUNK "{"
+    events+=Event[","]
+"}"
+;
+
+Event: 'evt' name=IRI_TRUNK ;
+EventRef:
+    "<" event=[Event|FQN] ">"
+;

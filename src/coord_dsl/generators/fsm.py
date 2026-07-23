@@ -6,13 +6,17 @@ from jinja2 import Environment, FileSystemLoader
 from os.path import basename
 from pathlib import Path
 from rdflib import Graph, URIRef
+from rdf_utils.models.event_loop import (
+    URI_EL_PRED_EVT_LOOP,
+    URI_EL_PRED_HAS_EVT,
+    URI_EL_PRED_REF_EVT,
+)
 from rdf_utils.naming import get_valid_var_name
 
 from coord_dsl.rdf.vocab import (
     URI_FSM_PRED_DESCRIPTION,
     URI_FSM_PRED_DO_TRANSITION,
     URI_FSM_PRED_END_STATE,
-    URI_FSM_PRED_EVENTS,
     URI_FSM_PRED_FIRES_EVENTS,
     URI_FSM_PRED_NAME,
     URI_FSM_PRED_REACTIONS,
@@ -21,7 +25,6 @@ from coord_dsl.rdf.vocab import (
     URI_FSM_PRED_TRANSITION_FROM,
     URI_FSM_PRED_TRANSITION_TO,
     URI_FSM_PRED_TRANSITIONS,
-    URI_FSM_PRED_WHEN_EVENT,
 )
 
 
@@ -57,7 +60,9 @@ def gen_json(g: Graph, fsm_ref: URIRef) -> dict:
 
     events = []
     event_uris = {}
-    for _, _, event_uri in g.triples((fsm_ref, URI_FSM_PRED_EVENTS, None)):
+    event_loop = g.value(fsm_ref, URI_EL_PRED_EVT_LOOP)
+    assert isinstance(event_loop, URIRef)
+    for event_uri in g.objects(event_loop, URI_EL_PRED_HAS_EVT):
         assert isinstance(event_uri, URIRef)
         uri_s = event_uri.toPython()
         ident = get_valid_var_name(local_name(uri_s)).upper()
@@ -87,7 +92,7 @@ def gen_json(g: Graph, fsm_ref: URIRef) -> dict:
     for _, _, rx_uri in g.triples((fsm_ref, URI_FSM_PRED_REACTIONS, None)):
         assert isinstance(rx_uri, URIRef)
         uri_s = rx_uri.toPython()
-        when_event_node = g.value(rx_uri, URI_FSM_PRED_WHEN_EVENT)
+        when_event_node = g.value(rx_uri, URI_EL_PRED_REF_EVT)
         assert isinstance(when_event_node, URIRef)
         when_event = get_valid_var_name(local_name(when_event_node.toPython())).upper()
         do_transition_node = g.value(rx_uri, URI_FSM_PRED_DO_TRANSITION)

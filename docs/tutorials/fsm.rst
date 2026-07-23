@@ -14,19 +14,21 @@ Explainable Systems of Systems`_, an FSM is represented as a pure data
 structure. A ``.fsm`` file contains:
 
 * **states** — the stateful behaviours, including a ``start`` and an ``end`` state;
-* **events** — occurrences or monitored state changes to which the machine reacts;
+* **an event loop** — named events representing occurrences or monitored state
+  changes to which the machine reacts;
 * **transitions** — directed ``from``/``to`` relationships between states; and
 * **reactions** — the policy relating an event to a transition and, optionally,
   further events to fire.
 
-Each reaction matches one event. Event compositions from the broader FSM design
-are not implemented.
+Each reaction matches one event from the referenced event loop. Event
+compositions from the broader FSM design are not implemented.
 
 The control loop and behaviour implementations are separate from the model.
 
-Each of those is a ``{ }`` scope whose entries are separated by commas.
-Declarations are bare names; every *reference* to one is written in angle
-brackets — ``start: <IDLE>``, ``from: <IDLE>, to: <GRASPING>``.
+The event loop is declared separately and referenced by the FSM. Declarations
+are bare names; references are written in angle brackets. Events use their
+event-loop-qualified name — ``when: <el.START>`` — while FSM-local references
+remain ``start: <IDLE>`` or ``from: <IDLE>, to: <GRASPING>``.
 
 .. literalinclude:: ../../examples/models/fsm/example.fsm
    :language: text

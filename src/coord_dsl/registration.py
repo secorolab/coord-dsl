@@ -9,7 +9,8 @@ from pathlib import Path
 from textx import GeneratorDesc, LanguageDesc, metamodel_from_file
 from textx.scoping import providers as scoping_providers
 
-from coord_dsl.classes.fsm import Event, FSM, FiredEvent, Reaction, State, Transition
+from coord_dsl.classes.event_loop import Event, EventLoop, EventRef
+from coord_dsl.classes.fsm import FSM, Reaction, State, Transition
 from coord_dsl.generators.dot import FORMATS, fsm_dot, write_dot
 from coord_dsl.generators.fsm import gen_cpp_header, gen_json, gen_python_code
 from coord_dsl.generators.provenance import record
@@ -23,7 +24,7 @@ SUPPORTED_GRAPH_FORMATS = {"ttl": "ttl", "xml": "xml", "json-ld": "ld.json"}
 def fsm_metamodel():
     mm = metamodel_from_file(
         GRAMMAR_PATH,
-        classes=[State, Event, Transition, FiredEvent, Reaction, FSM],
+        classes=[EventLoop, Event, EventRef, State, Transition, Reaction, FSM],
     )
     mm.register_scope_providers({"*.*": scoping_providers.FQNImportURI()})
     return mm
@@ -42,9 +43,18 @@ def graph_gen_console(metamodel, model, output_path, overwrite, debug, **kwargs)
     g, context, _ = get_fsm_graph(model)
     format = kwargs.get("format", "json-ld")
     if format not in SUPPORTED_GRAPH_FORMATS:
-        raise ValueError(f"Unsupported graph format {format!r}, supported formats are: {SUPPORTED_GRAPH_FORMATS}")
+        raise ValueError(
+            f"Unsupported graph format {format!r}, supported formats are: {SUPPORTED_GRAPH_FORMATS}"
+        )
     print(50 * "-")
-    print(g.serialize(format=format, indent=2, context=context, auto_compact="autocompact" in kwargs))
+    print(
+        g.serialize(
+            format=format,
+            indent=2,
+            context=context,
+            auto_compact="autocompact" in kwargs,
+        )
+    )
 
 
 def graph_gen_file(metamodel, model, output_path, overwrite, debug, **kwargs):
@@ -52,11 +62,23 @@ def graph_gen_file(metamodel, model, output_path, overwrite, debug, **kwargs):
     g, context, _ = get_fsm_graph(model)
     format = kwargs.get("format", "json-ld")
     if format not in SUPPORTED_GRAPH_FORMATS:
-        raise ValueError(f"Unsupported graph format {format!r}, supported formats are: {SUPPORTED_GRAPH_FORMATS}")
+        raise ValueError(
+            f"Unsupported graph format {format!r}, supported formats are: {SUPPORTED_GRAPH_FORMATS}"
+        )
     if not output_path:
-        output_path = Path(model._tx_filename).parent / f"{model.fsm.name}.{SUPPORTED_GRAPH_FORMATS[format]}"
+        output_path = (
+            Path(model._tx_filename).parent
+            / f"{model.fsm.name}.{SUPPORTED_GRAPH_FORMATS[format]}"
+        )
     with open(output_path, "w") as f:
-        f.write(g.serialize(format=format, indent=2, context=context, auto_compact="autocompact" in kwargs))
+        f.write(
+            g.serialize(
+                format=format,
+                indent=2,
+                context=context,
+                auto_compact="autocompact" in kwargs,
+            )
+        )
     record(model, "graph", output_path)
     print(f"FSM graph generated at {output_path}")
 
@@ -75,7 +97,10 @@ def gen_fsm_dot_file(metamodel, model, output_path, overwrite, debug, **kwargs):
             f"unhandled format {img_format!r} for the state-machine graph, try {['dot', *FORMATS]}"
         )
     g, _, fsm_ref = get_fsm_graph(model)
-    output_path = output_path or Path(model._tx_filename).parent / f"{model.fsm.name}.{img_format}"
+    output_path = (
+        output_path
+        or Path(model._tx_filename).parent / f"{model.fsm.name}.{img_format}"
+    )
     if Path(output_path).exists() and not overwrite:
         print(f"not overwriting existing file '{output_path}'")
         return
@@ -88,7 +113,9 @@ def gen_cpp(metamodel, model, output_path, overwrite, debug, **kwargs):
     del metamodel, overwrite, debug, kwargs
     g, _, fsm_ref = get_fsm_graph(model)
     rendered = gen_cpp_header(gen_json(g, fsm_ref))
-    output_path = output_path or Path(model._tx_filename).parent / f"{model.fsm.name}.hpp"
+    output_path = (
+        output_path or Path(model._tx_filename).parent / f"{model.fsm.name}.hpp"
+    )
     with open(output_path, "w") as f:
         f.write(rendered)
     record(model, "cpp", output_path)
@@ -99,7 +126,9 @@ def gen_python(metamodel, model, output_path, overwrite, debug, **kwargs):
     del metamodel, overwrite, debug, kwargs
     g, _, fsm_ref = get_fsm_graph(model)
     rendered = gen_python_code(gen_json(g, fsm_ref))
-    output_path = output_path or Path(model._tx_filename).parent / f"{model.fsm.name}.py"
+    output_path = (
+        output_path or Path(model._tx_filename).parent / f"{model.fsm.name}.py"
+    )
     with open(output_path, "w") as f:
         f.write(rendered)
     record(model, "python", output_path)

@@ -22,9 +22,10 @@ class FsmDotTest(unittest.TestCase):
     def test_draws_states_and_the_reactions_that_join_them(self):
         dot = self._dot(
             'ns g = "https://example.test/"\n'
+            "evt loop (ns=g) events { evt GRASP, evt DONE, evt NOTIFY }\n"
             "fsm (ns=g) gripper {\n"
             "  states { IDLE, GRASPING, GRASPED }\n"
-            "  events { GRASP, DONE, NOTIFY }\n"
+            "  evt loop: <events>\n"
             "  start: <IDLE>\n"
             "  end:   <GRASPED>\n"
             "  transitions {\n"
@@ -32,8 +33,8 @@ class FsmDotTest(unittest.TestCase):
             "    STOP  { from: <GRASPING>, to: <GRASPED> }\n"
             "  }\n"
             "  reactions {\n"
-            "    ON_GRASP { when: <GRASP>, do: <START> },\n"
-            "    ON_DONE  { when: <DONE>, do: <STOP>, fires { <NOTIFY> } }\n"
+            "    ON_GRASP { when: <events.GRASP>, do: <START> },\n"
+            "    ON_DONE  { when: <events.DONE>, do: <STOP>, fires { <events.NOTIFY> } }\n"
             "  }\n"
             "}\n"
         )
@@ -45,21 +46,24 @@ class FsmDotTest(unittest.TestCase):
         )
         self.assertIn('[label="DONE\\nfires NOTIFY"];', dot)
         self.assertIn('"__entry__" -> "https://example.test/IDLE";', dot)
-        self.assertIn('"https://example.test/GRASPED" [label="GRASPED", peripheries=2', dot)
+        self.assertIn(
+            '"https://example.test/GRASPED" [label="GRASPED", peripheries=2', dot
+        )
 
     def test_transition_without_a_reaction_is_drawn_dead(self):
         dot = self._dot(
             'ns g = "https://example.test/"\n'
+            "evt loop (ns=g) events { evt E }\n"
             "fsm (ns=g) m {\n"
             "  states { A, B, C }\n"
-            "  events { E }\n"
+            "  evt loop: <events>\n"
             "  start: <A>\n"
             "  end:   <C>\n"
             "  transitions {\n"
             "    LIVE  { from: <A>, to: <B> },\n"
             "    NEVER { from: <B>, to: <C> }\n"
             "  }\n"
-            "  reactions { ON_E { when: <E>, do: <LIVE> } }\n"
+            "  reactions { ON_E { when: <events.E>, do: <LIVE> } }\n"
             "}\n"
         )
         self.assertIn('[label="NEVER", style=dashed', dot)

@@ -16,13 +16,14 @@ The FSM design follows Prof. Herman Bruyninckx's
 an FSM is represented as a pure data structure. A `.fsm` file contains:
 
 - **states**: the stateful behaviours, including a `start` and an `end` state;
-- **events**: occurrences or monitored state changes to which the machine reacts;
+- **an event loop**: named events representing occurrences or monitored state
+  changes to which the machine reacts;
 - **transitions**: directed `from`/`to` relationships between states; and
 - **reactions**: the policy relating an event to a transition and, optionally,
   further events to fire.
 
-Each reaction matches one event. Event compositions from the broader FSM design
-are not implemented.
+Each reaction matches one event from the referenced event loop. Event
+compositions from the broader FSM design are not implemented.
 
 The control loop and behaviour implementations are separate from the model.
 The Python `coord_dsl` runtime and C++
@@ -33,10 +34,15 @@ angle brackets.
 ```text
 ns ex = "https://example.com/fsm/"
 
+evt loop (ns=ex) example_events {
+    evt E_START,
+    evt E_STOP
+}
+
 fsm (ns=ex) example_fsm {
     description: "Example FSM"
     states { S_START, S_RUNNING, S_EXIT }
-    events { E_START, E_STOP }
+    evt loop: <example_events>
     start: <S_START>
     end: <S_EXIT>
     transitions {
@@ -44,8 +50,8 @@ fsm (ns=ex) example_fsm {
         T_STOP  { from: <S_RUNNING>, to: <S_EXIT> }
     }
     reactions {
-        R_START { when: <E_START>, do: <T_START> },
-        R_STOP  { when: <E_STOP>, do: <T_STOP> }
+        R_START { when: <example_events.E_START>, do: <T_START> },
+        R_STOP  { when: <example_events.E_STOP>, do: <T_STOP> }
     }
 }
 ```

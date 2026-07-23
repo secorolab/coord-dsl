@@ -8,6 +8,7 @@ import subprocess
 from pathlib import Path
 
 from rdflib.namespace import split_uri
+from rdf_utils.models.event_loop import URI_EL_PRED_REF_EVT
 
 from coord_dsl.rdf.vocab import (
     URI_FSM_PRED_DO_TRANSITION,
@@ -20,7 +21,6 @@ from coord_dsl.rdf.vocab import (
     URI_FSM_PRED_TRANSITION_FROM,
     URI_FSM_PRED_TRANSITION_TO,
     URI_FSM_PRED_TRANSITIONS,
-    URI_FSM_PRED_WHEN_EVENT,
 )
 
 FORMATS = ("png", "svg", "pdf")
@@ -39,7 +39,9 @@ def write_dot(dot_source, output_path, img_format):
         Path(output_path).write_text(dot_source)
         return
     if shutil.which("dot") is None:
-        raise ValueError(f"graphviz is needed to write {img_format!r}: no 'dot' on PATH")
+        raise ValueError(
+            f"graphviz is needed to write {img_format!r}: no 'dot' on PATH"
+        )
     subprocess.run(
         ["dot", f"-T{img_format}", "-o", str(output_path)],
         input=dot_source,
@@ -82,8 +84,10 @@ def _fsm_body(g, fsm_ref, indent, entry=True, awaited=(), colour=None):
     for reaction in sorted(g.objects(fsm_ref, URI_FSM_PRED_REACTIONS), key=str):
         transition = g.value(reaction, URI_FSM_PRED_DO_TRANSITION)
         reacted.add(transition)
-        label = [_local(g.value(reaction, URI_FSM_PRED_WHEN_EVENT))]
-        fires = sorted(_local(e) for e in g.objects(reaction, URI_FSM_PRED_FIRES_EVENTS))
+        label = [_local(g.value(reaction, URI_EL_PRED_REF_EVT))]
+        fires = sorted(
+            _local(e) for e in g.objects(reaction, URI_FSM_PRED_FIRES_EVENTS)
+        )
         if fires:
             label.append("fires " + ", ".join(fires))
         text = "\\n".join(_esc(line) for line in label)
@@ -105,7 +109,10 @@ def _fsm_body(g, fsm_ref, indent, entry=True, awaited=(), colour=None):
 
 def fsm_dot(g, fsm_ref) -> str:
     """States as nodes, one edge per reaction: what fires it, and what it fires."""
-    lines = [f'digraph "{_esc(g.value(fsm_ref, URI_FSM_PRED_NAME))}" {{', "  rankdir=LR;"] + _HEADER
+    lines = [
+        f'digraph "{_esc(g.value(fsm_ref, URI_FSM_PRED_NAME))}" {{',
+        "  rankdir=LR;",
+    ] + _HEADER
     lines += _fsm_body(g, fsm_ref, "  ")
     lines.append("}")
     return "\n".join(lines) + "\n"
