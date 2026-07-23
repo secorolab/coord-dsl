@@ -1,0 +1,36 @@
+# SPDX-License-Identifier: MPL-2.0
+name: docs
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install docs dependencies
+        run: pip install sphinx furo
+
+      - name: Build HTML
+        run: sphinx-build -b html -W --keep-going docs docs/_build/html
+
+      - name: Upload preview artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-${{ github.sha }}
+          path: docs/_build/html
