@@ -25,10 +25,31 @@ compositions from the broader FSM design are not implemented.
 
 The control loop and behaviour implementations are separate from the model.
 
-The event loop is declared separately and referenced by the FSM. Declarations
-are bare names; references are written in angle brackets. Events use their
-event-loop-qualified name — ``when: <el.START>`` — while FSM-local references
-remain ``start: <IDLE>`` or ``from: <IDLE>, to: <GRASPING>``.
+**Event-loop syntax.**
+
+Declare an event loop before the FSM. It has its own namespace and name; each
+comma-separated event is introduced by ``evt``:
+
+.. code-block:: text
+
+   evt loop (ns=ex) el {
+       evt START,
+       evt STOP
+   }
+
+The FSM selects one declared loop with ``evt loop: <el>``. Event references use
+the loop-qualified name in both ``when`` and ``fires``:
+
+.. code-block:: text
+
+   R_START {
+       when: <el.START>,
+       do: <T_START>,
+       fires { <el.STOP> }
+   }
+
+Within the same scope, e.g. in the same FSM declaration, references can be
+direct, e.g., ``start: <IDLE>`` or ``from: <IDLE>, to: <GRASPING>``.
 
 .. literalinclude:: ../../examples/models/fsm/example.fsm
    :language: text

@@ -31,6 +31,12 @@ The Python `coord_dsl` runtime and C++
 provide their event loops. References to model declarations are enclosed in
 angle brackets.
 
+An event loop is declared before the FSM as
+`evt loop (ns=<namespace>) <name> { ... }`. Each comma-separated event uses
+`evt <name>`. The FSM selects a loop with `evt loop: <loop>`, and reactions
+refer to its events by fully qualified name, such as `<loop.EVENT>`, in both
+`when` and `fires`.
+
 ```text
 ns ex = "https://example.com/fsm/"
 
