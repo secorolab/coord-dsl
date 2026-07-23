@@ -1,47 +1,40 @@
+import base
+import event_loop
+
 Model:
+    imports*=Import
     namespaces*=NamespaceDeclare
+    event_loops*=EventLoop
     fsm=FSM
 ;
 
 FSM:
-"FSM" "(" "ns" "=" ns=[NamespaceDeclare|FQN] ")"  name=IRI_TRUNK "{"
-    ("DESCRIPTION" ":" description=STRING)?
-    "STATES"      ":" states+=State[","]
-    "START_STATE" ":" "@" start_state=[State|IRI_TRUNK]
-    "END_STATE"   ":" "@" end_state=[State|IRI_TRUNK]
-    "EVENTS"      ":" events+=Event[","]
-    "TRANSITIONS" ":" transitions+=Transition
-    "REACTIONS"   ":" reactions+=Reaction
-"}"
+    "fsm" "(" "ns" "=" ns=[NamespaceDeclare|FQN] ")" name=IRI_TRUNK "{"
+        ("description" ":" description=STRING)?
+        "states" "{" states+=State[","] "}"
+        "evt" "loop" ":" "<" event_loop=[EventLoop|FQN] ">"
+        "start" ":" "<" start_state=[State|FQN] ">"
+        "end"   ":" "<" end_state=[State|FQN] ">"
+        "transitions" "{" transitions+=Transition[","] "}"
+        "reactions"   "{" reactions+=Reaction[","] "}"
+    "}"
 ;
 
 State:
     name=IRI_TRUNK
 ;
 
-Event:
-    name=IRI_TRUNK
-;
-
 Transition:
-    name=IRI_TRUNK ":"
-        "FROM" ":" "@" from_state=[State|IRI_TRUNK]
-        "TO"   ":" "@" to_state=[State|IRI_TRUNK]
+    name=IRI_TRUNK "{"
+        "from" ":" "<" from_state=[State|FQN] ">" ","
+        "to"   ":" "<" to_state=[State|FQN] ">"
+    "}"
 ;
 
 Reaction:
-    name=IRI_TRUNK ":"
-        "WHEN" ":" "@" when=[Event|IRI_TRUNK]
-        "DO"   ":" "@" do=[Transition|IRI_TRUNK]
-        ("FIRES" ":" fires+=FiredEvent[","])?
+    name=IRI_TRUNK "{"
+        "when" ":" "<" when=[Event|FQN] ">" ","
+        "do"   ":" "<" do=[Transition|FQN] ">"
+        ("," "fires" "{" fires+=EventRef[","] "}")?
+    "}"
 ;
-
-FiredEvent:
-    "@" event=[Event|IRI_TRUNK]
-;
-
-FQN: IRI_TRUNK+["."];
-Import: "import" importURI=STRING;
-Comment: /\/\/.*$/;
-NamespaceDeclare: "ns" name=IRI_TRUNK "=" uri=STRING ;
-IRI_TRUNK: /[^\d\W][\w-]*\b/;

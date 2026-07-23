@@ -1,19 +1,19 @@
 # SPDX-License-Identifier: MPL-2.0
 # Author: Minh Nguyen
 
+from typing import Optional
 from rdflib import Namespace, URIRef
 
 
 class IHasParent(object):
     def __init__(self, **kwargs) -> None:
         self.parent = kwargs.get("parent", None)
-        assert self.parent is not None, f"'parent' not handled for type '{self.__class__.__name__}'"
+        assert (
+            self.parent is not None
+        ), f"'parent' not handled for type '{self.__class__.__name__}'"
 
 
 class IHasNamespace(IHasParent):
-    def __init__(self, **kwargs) -> None:
-        super().__init__(**kwargs)
-
     @property
     def namespace(self) -> Namespace:
         raise NotImplementedError(
@@ -43,20 +43,25 @@ class IHasNamespaceDeclare(IHasNamespace):
         return self._ns_obj
 
 
-class NamedNamespaceObject(IHasNamespace):
+class IInheritNamespace(IHasNamespace):
+    _uri: Optional[URIRef]
+
     def __init__(self, parent, name, **kwargs):
-        del kwargs
         super().__init__(parent=parent)
         self.name = name
-        self._uri = ""
+        self._uri = None
 
     @property
     def namespace(self) -> Namespace:
-        assert self.parent is not None, f"'parent' not set for '{self.__class__.__name__}'"
-        return Namespace(self.parent.namespace)
+        if not isinstance(self.parent, IHasNamespace):
+            raise ValueError(
+                f"parent of '{self.name}' ({self.__class__.__name__}) not an instance of"
+                f" IHasNamespace: {self.parent}"
+            )
+        return self.parent.namespace
 
     @property
-    def uri(self) -> str:
-        if self._uri == "":
+    def uri(self) -> URIRef:
+        if self._uri is None:
             self._uri = self.namespace[self.name]
         return self._uri

@@ -52,6 +52,9 @@ class ReactionID(IntEnum):
 
 
 # URI mappings
+#: This FSM's own IRI; the tables below name its parts.
+FSM_URI: str = "{{ data.uri }}"
+
 STATE_URIS: dict[StateID, str] = {
 {%- for state in data.states %}
     StateID.{{ state }}: "{{ data.state_uris[state] }}",
