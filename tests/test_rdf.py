@@ -19,7 +19,7 @@ class FsmRdfTest(unittest.TestCase):
     def test_example_conforms_to_fsm_and_event_loop_shacl(self):
         install_resolver()
         model = fsm_metamodel().model_from_file(MODEL)
-        graph, _, _ = get_fsm_graph(model)
+        graph, _ = get_fsm_graph(model)
 
         self.assertTrue(
             check_shacl_constraints(

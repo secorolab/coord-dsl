@@ -2,7 +2,7 @@
 # SPDX-FileCopyrightText: 2026 SECORO AG (secoro.uni-bremen.de)
 # Author: Vamsi Kalagaturu
 
-from rdflib import Graph, Literal, Namespace, RDF, URIRef
+from rdflib import Graph, Literal, RDF, URIRef
 from rdf_utils.models.event_loop import (
     URI_EL_PRED_EVT_LOOP,
     URI_EL_PRED_HAS_EVT,
@@ -35,7 +35,7 @@ from coord_dsl.rdf.vocab import (
 )
 
 
-def get_fsm_graph(model) -> tuple[Graph, dict, URIRef]:
+def get_fsm_graph(model) -> tuple[Graph, URIRef]:
     fsm = getattr(model, "fsm", None)
     assert isinstance(fsm, FSM), "Model does not contain an FSM definition"
 
@@ -44,8 +44,7 @@ def get_fsm_graph(model) -> tuple[Graph, dict, URIRef]:
     graph.bind("el", NS_MM_EL)
     graph.bind("time", NS_OWL_TIME)
 
-    ns_model = Namespace(fsm.namespace)
-    graph.bind(fsm.ns_prefix, ns_model)
+    graph.bind(fsm.ns_prefix, fsm.namespace)
 
     assert fsm.uri is not None, "FSM must have a URI"
 
@@ -101,10 +100,4 @@ def get_fsm_graph(model) -> tuple[Graph, dict, URIRef]:
                 )
             )
 
-    context = {
-        "fsm": str(NS_MM_FSM),
-        "el": str(NS_MM_EL),
-        "time": str(NS_OWL_TIME),
-        fsm.ns_prefix: ns_model,
-    }
-    return graph, context, fsm.uri
+    return graph, fsm.uri

@@ -80,9 +80,10 @@ Generate
    textx generate example.fsm --target dot --format png     # a picture of the machine
 
 The ``graph`` and ``console`` targets call ``rdflib.Graph.serialize`` with
-``format`` from ``--format`` (default: ``json-ld``), the model's generated
-JSON-LD ``context``, ``indent=2``, and ``auto_compact=True`` when
-``--autocompact`` is present (``False`` otherwise).
+``format`` from ``--format`` (default: ``json-ld``), ``indent=2``, and
+``auto_compact=True`` when ``--autocompact`` is present (``False`` otherwise).
+RDFLib derives the compacted JSON-LD context from the graph's namespace
+manager.
 
 The code targets emit ``create_fsm()``, ``destroy_fsm()`` (C++), the
 state/event/transition/reaction enums, and the IRI tables below. No control loop —

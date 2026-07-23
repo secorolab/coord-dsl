@@ -16,7 +16,7 @@ from coord_dsl.registration import fsm_metamodel
 class FsmDotTest(unittest.TestCase):
     def _dot(self, source):
         model = fsm_metamodel().model_from_str(source)
-        graph, _, fsm_ref = get_fsm_graph(model)
+        graph, fsm_ref = get_fsm_graph(model)
         return fsm_dot(graph, fsm_ref)
 
     def test_draws_states_and_the_reactions_that_join_them(self):

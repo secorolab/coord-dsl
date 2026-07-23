@@ -78,8 +78,9 @@ Available targets:
 - `dot` / `dot-console`: graphviz source or a PNG, SVG, or PDF rendering.
 
 The RDF generators call `rdflib.Graph.serialize` with `format` from `--format`
-(default: `json-ld`), the model's generated JSON-LD `context`, `indent=2`, and
-`auto_compact=True` when `--autocompact` is present (`False` otherwise).
+(default: `json-ld`), `indent=2`, and `auto_compact=True` when `--autocompact`
+is present (`False` otherwise). RDFLib derives the compacted JSON-LD context
+from the graph's namespace manager.
 
 Generated code includes `FSM_URI` and URI tables for states, events,
 transitions, and reactions. File generators also update a
