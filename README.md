@@ -6,8 +6,12 @@ machines, with Python, C++, RDF, and graphviz generators.
 ## Installation
 
 ```bash
+pip install "rdf_utils @ git+https://github.com/minhnh/rdf-utils.git"
 pip install -e .
 ```
+
+If both repositories are sibling checkouts, the first command can instead be
+`pip install -e ../rdf-utils`.
 
 ## Model
 

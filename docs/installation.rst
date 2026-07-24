@@ -6,9 +6,13 @@ The Python package
 
 .. code-block:: bash
 
+   pip install "rdf_utils @ git+https://github.com/minhnh/rdf-utils.git"
    pip install coord_dsl
    # or, from a checkout:
    pip install -e .
+
+If ``rdf-utils`` is a sibling checkout, the first command can instead be
+``pip install -e ../rdf-utils``. It is not currently published on PyPI.
 
 This registers the ``.fsm`` language and its generators with ``textx``.
 
