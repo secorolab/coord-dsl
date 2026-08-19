@@ -1,0 +1,69 @@
+// Its event loop carries the events this FSM reacts to and the flags a tree reads.
+
+ns pc = "https://secorolab.github.io/models/fsm/pick_coordination/"
+
+evt loop (ns=pc) pick_coordination_events {
+    evt e_start,
+    evt e_perceived,
+    evt e_picked,
+    evt e_placed,
+    evt e_failed,
+    evt e_recovered,
+    flg object_visible,
+    flg object_grasped
+}
+
+fsm (ns=pc) pick_coordination {
+    description: "Drives a pick task through perception, picking and placing"
+
+    states {
+        S_IDLE,
+        S_PERCEIVE,
+        S_PICK,
+        S_PLACE,
+        S_RECOVER,
+        S_DONE
+    }
+
+    evt loop: <pick_coordination_events>
+
+    start: <S_IDLE>
+    end:   <S_DONE>
+
+    transitions {
+        T_IDLE_PERCEIVE    { from: <S_IDLE>,     to: <S_PERCEIVE> },
+        T_PERCEIVE_PICK    { from: <S_PERCEIVE>, to: <S_PICK> },
+        T_PICK_PLACE       { from: <S_PICK>,     to: <S_PLACE> },
+        T_PLACE_DONE       { from: <S_PLACE>,    to: <S_DONE> },
+        T_PICK_RECOVER     { from: <S_PICK>,     to: <S_RECOVER> },
+        T_RECOVER_PERCEIVE { from: <S_RECOVER>,  to: <S_PERCEIVE> }
+    }
+
+    reactions {
+        R_START {
+            when: <pick_coordination_events.e_start>,
+            do:   <T_IDLE_PERCEIVE>
+        },
+        R_PERCEIVED {
+            when: <pick_coordination_events.e_perceived>,
+            do:   <T_PERCEIVE_PICK>
+        },
+        R_PICKED {
+            when: <pick_coordination_events.e_picked>,
+            do:   <T_PICK_PLACE>
+        },
+        R_PLACED {
+            when: <pick_coordination_events.e_placed>,
+            do:   <T_PLACE_DONE>
+        },
+        R_FAILED {
+            when: <pick_coordination_events.e_failed>,
+            do:   <T_PICK_RECOVER>
+        },
+        R_RECOVERED {
+            when: <pick_coordination_events.e_recovered>,
+            do:   <T_RECOVER_PERCEIVE>,
+            fires { <pick_coordination_events.e_start> }
+        }
+    }
+}

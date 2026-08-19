@@ -1,0 +1,59 @@
+// Fetch an order, recovering when the shelf is not reachable.
+
+ns wh = "https://secorolab.github.io/models/bt/warehouse/"
+
+evt loop (ns=wh) monitors {
+    flg battery_ok,
+    flg shelf_reachable,
+    flg item_held,
+    flg at_dropoff
+}
+
+behaviours (ns=wh) warehouse_behaviours {
+    action recharge,
+    action drive_to_shelf,
+    action clear_obstacle,
+    action replan_route,
+    action pick_item,
+    action drive_to_dropoff,
+    action place_item
+}
+
+btree (ns=wh) reach_shelf {
+    selector {
+        condition <monitors.shelf_reachable>,
+        <warehouse_behaviours.clear_obstacle>,
+        <warehouse_behaviours.replan_route>
+    }
+}
+
+btree (ns=wh) go_to_shelf {
+    sequence (memory=true) {
+        subtree <reach_shelf>,
+        <warehouse_behaviours.drive_to_shelf>
+    }
+}
+
+btree (ns=wh) fetch_item {
+    sequence (memory=true) {
+        subtree <go_to_shelf>,
+        <warehouse_behaviours.pick_item>,
+        condition <monitors.item_held>
+    }
+}
+
+btree (ns=wh) warehouse_order {
+    selector {
+        sequence {
+            condition <monitors.battery_ok>,
+            subtree <fetch_item>,
+            parallel (threshold=2) {
+                <warehouse_behaviours.drive_to_dropoff>,
+                condition <monitors.item_held>
+            },
+            condition <monitors.at_dropoff>,
+            <warehouse_behaviours.place_item>
+        },
+        <warehouse_behaviours.recharge>
+    }
+}

@@ -1,0 +1,9 @@
+build
+/pick.py
+/pick.ttl
+/pick.xml
+/warehouse_order.*
+/coordinated_pick.py
+/coordinated_pick.ttl
+/coordinated_pick.xml
+/provenance.ld.json
