@@ -148,6 +148,22 @@ def gen_python_code(ir: dict) -> str:
     return _render("bt.py.jinja2", dict(ir, notes=notes))
 
 
+def gen_dot(ir: dict) -> str:
+    """Generates graphviz source, one cluster per tree."""
+    roots = {tree["name"]: _node_id(tree["root"]) for tree in ir["trees"]}
+    print(f"Drawing behaviour tree: {ir['entry']}")
+    return _render("bt.dot.jinja2", dict(ir, roots=roots))
+
+
+def _node_id(node: dict) -> str:
+    """A subtree and a state machine are drawn as the thing they name."""
+    if node["kind"] == "subtree":
+        return node["tree"]
+    if node["kind"] == "state_machine":
+        return f"fsm__{node['fsm']}"
+    return node["name"]
+
+
 def gen_xml(ir: dict) -> str:
     """Generates a BehaviorTree.CPP v4 XML file."""
     print(f"Generating BehaviorTree.CPP XML for behaviour tree: {ir['entry']}")

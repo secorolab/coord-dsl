@@ -13,6 +13,7 @@ from coord_dsl.classes.bt import BehaviourDecl, BehaviourSet, BehaviourTree
 from coord_dsl.classes.event_loop import Event, EventLoop, EventRef, Flag
 from coord_dsl.classes.fsm import FSM, Reaction, State, Transition
 from coord_dsl.generators.dot import FORMATS, fsm_dot, write_dot
+from coord_dsl.generators.bt import gen_dot as gen_bt_dot
 from coord_dsl.generators.bt import gen_json as gen_bt_json
 from coord_dsl.generators.bt import gen_python_code as gen_bt_python_code
 from coord_dsl.generators.bt import gen_xml as gen_bt_xml
@@ -112,6 +113,44 @@ def gen_bt_xml_file(metamodel, model, output_path, overwrite, debug, **kwargs):
     print(f"BT BehaviorTree.CPP XML generated at {output_path}")
 
 
+def gen_bt_dot_console(metamodel, model, output_path, overwrite, debug, **kwargs):
+    del metamodel, output_path, overwrite, debug, kwargs
+    g, entry = get_bt_graph(model)
+    print(gen_bt_dot(gen_bt_json(g, entry)), end="")
+
+
+def gen_bt_dot_file(metamodel, model, output_path, overwrite, debug, **kwargs):
+    del metamodel, debug
+    img_format = kwargs.get("format", "dot")
+    if img_format not in ("dot",) + FORMATS:
+        raise ValueError(
+            f"unhandled format {img_format!r} for the behaviour tree, try {['dot', *FORMATS]}"
+        )
+    g, entry = get_bt_graph(model)
+    output_path = (
+        output_path
+        or Path(model._tx_filename).parent / f"{model.trees[-1].name}.{img_format}"
+    )
+    if Path(output_path).exists() and not overwrite:
+        print(f"not overwriting existing file '{output_path}'")
+        return
+    write_dot(gen_bt_dot(gen_bt_json(g, entry)), output_path, img_format)
+    record(model, "dot", output_path)
+    print(f"BT drawn at {output_path}")
+
+
+bt_dot_gen = GeneratorDesc(
+    language="coord_dsl_bt",
+    target="dot",
+    description="Draws the behaviour tree with graphviz",
+    generator=gen_bt_dot_file,
+)
+bt_dot_console_gen = GeneratorDesc(
+    language="coord_dsl_bt",
+    target="dot_console",
+    description="Prints the behaviour tree's graphviz source",
+    generator=gen_bt_dot_console,
+)
 bt_python_gen = GeneratorDesc(
     language="coord_dsl_bt",
     target="python",

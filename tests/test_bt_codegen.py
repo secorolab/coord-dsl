@@ -2,11 +2,13 @@
 # SPDX-FileCopyrightText: 2026 SECORO AG (secoro.uni-bremen.de)
 """Tests for the py_trees and BehaviorTree.CPP targets."""
 
+import shutil
 import unittest
 from pathlib import Path
 from xml.etree import ElementTree
 
-from coord_dsl.generators.bt import gen_json, gen_python_code, gen_xml
+from coord_dsl.generators.bt import gen_dot, gen_json, gen_python_code, gen_xml
+from coord_dsl.generators.dot import write_dot
 from coord_dsl.rdf.bt import get_bt_graph
 from coord_dsl.registration import bt_metamodel
 
@@ -153,6 +155,36 @@ class BtXmlTest(unittest.TestCase):
     def test_a_condition_becomes_a_flag_check(self):
         checks = {c.get("code") for c in self.root.iter("ScriptCondition")}
         self.assertIn("battery_ok == true", checks)
+
+
+class BtDotTest(unittest.TestCase):
+    def test_every_tree_gets_a_cluster(self):
+        source = gen_dot(_ir("warehouse"))
+        for tree in ("warehouse_order", "fetch_item", "go_to_shelf", "reach_shelf"):
+            self.assertIn(f'subgraph "cluster_{tree}"', source)
+
+    def test_a_subtree_edge_points_at_its_cluster(self):
+        source = gen_dot(_ir("warehouse"))
+        self.assertIn('lhead="cluster_fetch_item"', source)
+
+    def test_a_state_machine_is_drawn_as_itself(self):
+        source = gen_dot(_ir("coordinated_pick"))
+        self.assertIn('"fsm__pick_coordination" [label="pick_coordination"', source)
+
+    @unittest.skipUnless(shutil.which("dot"), "graphviz is not installed")
+    def test_graphviz_accepts_the_source(self):
+        for model in ("pick", "warehouse", "coordinated_pick"):
+            with self.subTest(model=model):
+                out = Path(self.tmp) / f"{model}.svg"
+                write_dot(gen_dot(_ir(model)), out, "svg")
+                self.assertTrue(out.stat().st_size > 0)
+
+    def setUp(self):
+        import tempfile
+
+        self._tmp = tempfile.TemporaryDirectory()
+        self.tmp = self._tmp.name
+        self.addCleanup(self._tmp.cleanup)
 
 
 class BtPythonTest(unittest.TestCase):

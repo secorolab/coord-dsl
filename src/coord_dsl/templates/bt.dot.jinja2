@@ -1,0 +1,57 @@
+digraph "{{ data.entry }}" {
+  rankdir=TB;
+  compound=true;
+  ordering=out;
+  graph [fontname="Helvetica", fontsize=11];
+  node [fontname="Helvetica", fontsize=10, shape=box, style="rounded,filled", fillcolor="#ffffff"];
+  edge [fontname="Helvetica", fontsize=9, color="#5f6368"];
+{% macro nid(n) %}
+{%- if n.kind == "subtree" %}{{ data.roots[n.tree] }}
+{%- elif n.kind == "state_machine" %}fsm__{{ n.fsm }}
+{%- else %}{{ n.name }}
+{%- endif %}
+{%- endmacro %}
+{% macro declare(n, indent) %}
+{%- set pad = " " * indent %}
+{%- if n.kind == "sequence" %}
+{{ pad }}"{{ n.name }}" [label="→{{ "" if n.memory else "\\n(reactive)" }}", shape=box, style=filled, fillcolor="#e8f0fe"];
+{% for child in n.children %}{{ declare(child, indent) }}
+{% endfor %}
+{%- elif n.kind == "selector" %}
+{{ pad }}"{{ n.name }}" [label="?{{ "" if n.memory else "\\n(reactive)" }}", shape=box, style=filled, fillcolor="#fce8e6"];
+{% for child in n.children %}{{ declare(child, indent) }}
+{% endfor %}
+{%- elif n.kind == "parallel" %}
+{{ pad }}"{{ n.name }}" [label="⇉\n{{ n.threshold }} of {{ n.children|length }}", shape=box, style=filled, fillcolor="#fef7e0"];
+{% for child in n.children %}{{ declare(child, indent) }}
+{% endfor %}
+{%- elif n.kind == "condition" %}
+{{ pad }}"{{ n.name }}" [label="{{ n.flag }}", shape=ellipse, fillcolor="#e6f4ea"];
+{%- elif n.kind == "state_machine" %}
+{{ pad }}"fsm__{{ n.fsm }}" [label="{{ n.fsm }}", shape=box3d, fillcolor="#f3e8fd"];
+{%- elif n.kind == "action" %}
+{{ pad }}"{{ n.name }}" [label="{{ n.action }}"];
+{%- endif %}
+{%- endmacro %}
+{% macro link(n, indent) %}
+{%- set pad = " " * indent %}
+{%- for child in n.children %}
+{{ pad }}"{{ n.name }}" -> "{{ nid(child) }}"{% if child.kind == "subtree" %} [lhead="cluster_{{ child.tree }}", style=dashed]{% endif %};
+{% if child.children is defined %}
+{{ link(child, indent) }}
+{% endif %}
+{% endfor %}
+{%- endmacro %}
+{% for tree in data.trees %}
+
+  subgraph "cluster_{{ tree.name }}" {
+    label="{{ tree.name }}";
+    style=rounded;
+    color="#dadce0";
+{{ declare(tree.root, 4) }}
+  }
+{% endfor %}
+{% for tree in data.trees %}
+{{ link(tree.root, 2) }}
+{% endfor %}
+}
