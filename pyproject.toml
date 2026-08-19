@@ -38,6 +38,7 @@ where = ["src"]
 
 [project.entry-points."textx_languages"]
 "fsm" = "coord_dsl.registration:fsm_lang"
+"bt" = "coord_dsl.registration:bt_lang"
 
 [project.entry-points."textx_generators"]
 "fsm_graph_console" = "coord_dsl.registration:fsm_console_gen"
@@ -46,6 +47,11 @@ where = ["src"]
 "fsm_dot_console" = "coord_dsl.registration:fsm_dot_console_gen"
 "fsm_cpp" = "coord_dsl.registration:fsm_cpp_gen"
 "fsm_python" = "coord_dsl.registration:fsm_python_gen"
+"bt_graph" = "coord_dsl.registration:bt_file_gen"
+"bt_python" = "coord_dsl.registration:bt_python_gen"
+"bt_xml" = "coord_dsl.registration:bt_xml_gen"
+"bt_dot" = "coord_dsl.registration:bt_dot_gen"
+"bt_dot_console" = "coord_dsl.registration:bt_dot_console_gen"
 
 [ruff]
 line-length = 100

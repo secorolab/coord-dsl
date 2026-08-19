@@ -1,0 +1,65 @@
+import base
+import event_loop
+import state_machine
+
+Model:
+    imports*=Import
+    namespaces*=NamespaceDeclare
+    event_loops*=EventLoop
+    behaviour_sets*=BehaviourSet
+    trees+=BehaviourTree
+;
+
+BehaviourSet:
+    "behaviours" "(" "ns" "=" ns=[NamespaceDeclare|FQN] ")" name=IRI_TRUNK "{"
+        behaviours+=BehaviourDecl[","]
+    "}"
+;
+
+BehaviourDecl:
+    "action" name=IRI_TRUNK
+;
+
+BehaviourTree:
+    "btree" "(" "ns" "=" ns=[NamespaceDeclare|FQN] ")" name=IRI_TRUNK "{"
+        root=Node
+    "}"
+;
+
+Node:
+    Sequence | Selector | Parallel | Subtree | Condition | Leaf
+;
+
+Sequence:
+    "sequence" ("(" "memory" "=" memory=BOOL ")")? "{"
+        children+=Node[","]
+    "}"
+;
+
+Selector:
+    "selector" ("(" "memory" "=" memory=BOOL ")")? "{"
+        children+=Node[","]
+    "}"
+;
+
+Parallel:
+    "parallel" "(" "threshold" "=" threshold=INT ")" "{"
+        children+=Node[","]
+    "}"
+;
+
+Subtree:
+    "subtree" "<" tree=[BehaviourTree|FQN] ">"
+;
+
+Condition:
+    "condition" "<" flag=[Flag|FQN] ">"
+;
+
+Leaf:
+    "<" target=[Tickable|FQN] ">"
+;
+
+Tickable:
+    BehaviourDecl | FSM
+;

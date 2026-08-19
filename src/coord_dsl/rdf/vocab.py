@@ -24,3 +24,19 @@ URI_FSM_PRED_TRANSITION_FROM = NS_MM_FSM["transition-from"]
 URI_FSM_PRED_TRANSITION_TO = NS_MM_FSM["transition-to"]
 URI_FSM_PRED_DO_TRANSITION = NS_MM_FSM["do-transition"]
 URI_FSM_PRED_FIRES_EVENTS = NS_MM_FSM["fires-events"]
+
+
+NS_MM_BT = Namespace(f"{URL_SECORO_MM}/behaviour/behaviour-tree#")
+
+URI_BT_TYPE_TREE = NS_MM_BT["BehaviourTree"]
+URI_BT_TYPE_SEQUENCE = NS_MM_BT["Sequence"]
+URI_BT_TYPE_SELECTOR = NS_MM_BT["Selector"]
+URI_BT_TYPE_PARALLEL = NS_MM_BT["Parallel"]
+URI_BT_TYPE_ACTION = NS_MM_BT["Action"]
+URI_BT_TYPE_CONDITION = NS_MM_BT["Condition"]
+
+URI_BT_PRED_ROOT = NS_MM_BT["root"]
+URI_BT_PRED_CHILDREN = NS_MM_BT["children"]
+URI_BT_PRED_MEMORY = NS_MM_BT["memory"]
+URI_BT_PRED_SUCCESS_THRESHOLD = NS_MM_BT["success-threshold"]
+URI_BT_PRED_OF_ACTION = NS_MM_BT["of-action"]

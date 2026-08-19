@@ -2,11 +2,15 @@ import base
 
 EventLoop:
 "evt" "loop" "(" "ns" "=" ns=[NamespaceDeclare|FQN] ")" name=IRI_TRUNK "{"
-    events+=Event[","]
+    members+=EventLoopMember[","]
 "}"
 ;
 
+EventLoopMember: Event | Flag ;
+
 Event: 'evt' name=IRI_TRUNK ;
+Flag: 'flg' name=IRI_TRUNK ;
+
 EventRef:
     "<" event=[Event|FQN] ">"
 ;

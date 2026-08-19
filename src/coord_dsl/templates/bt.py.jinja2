@@ -1,0 +1,105 @@
+"""
+This is an auto-generated file. Do not edit it directly.
+
+Behaviour tree: {{ data.entry }}
+
+Actions and state machines come from the caller, keyed by name; conditions
+read a flag of the same name off the blackboard.
+{% if data.notes %}
+
+Where this differs from the model:
+{% for note in data.notes %}
+  - {{ note }}
+{% endfor %}
+{% endif %}
+
+>>> import py_trees
+>>> board = py_trees.blackboard.Client(name="flags")
+{% for flag in data.flags %}
+>>> board.register_key(key="{{ flag.name }}", access=py_trees.common.Access.WRITE)
+{% endfor %}
+>>> tree = py_trees.trees.BehaviourTree({{ data.entry }}({
+{% for action in data.actions %}
+...     "{{ action.name }}": lambda: MyAction("{{ action.name }}"),
+{% endfor %}
+... }))
+>>> tree.tick()
+"""
+
+import operator
+
+import py_trees
+
+# The model IRI behind each name.
+ACTION_IRI = {
+{% for action in data.actions %}
+    "{{ action.name }}": "{{ action.uri }}",
+{% endfor %}
+}
+FLAG_IRI = {
+{% for flag in data.flags %}
+    "{{ flag.name }}": "{{ flag.uri }}",
+{% endfor %}
+}
+FSM_IRI = {
+{% for machine in data.state_machines %}
+    "{{ machine.name }}": "{{ machine.uri }}",
+{% endfor %}
+}
+TREE_IRI = {
+{% for tree in data.trees %}
+    "{{ tree.name }}": "{{ tree.uri }}",
+{% endfor %}
+}
+
+
+def _check(flag):
+    """Succeeds while the flag is set; never returns RUNNING."""
+    return py_trees.behaviours.CheckBlackboardVariableValue(
+        name=flag,
+        check=py_trees.common.ComparisonExpression(
+            variable=flag, value=True, operator=operator.eq
+        ),
+    )
+{% macro node(n, indent) %}
+{%- set pad = " " * indent %}
+{%- if n.kind == "sequence" or n.kind == "selector" %}
+{%- set cls = "Sequence" if n.kind == "sequence" else "Selector" %}
+{{ pad }}py_trees.composites.{{ cls }}(
+{{ pad }}    name="{{ n.name }}",
+{{ pad }}    memory={{ n.memory }},
+{{ pad }}    children=[
+{% for child in n.children %}
+{{ node(child, indent + 8) }},
+{% endfor %}
+{{ pad }}    ],
+{{ pad }})
+{%- elif n.kind == "parallel" %}
+{%- set policy = "SuccessOnOne()" if n.threshold == 1 else "SuccessOnAll()" %}
+{{ pad }}py_trees.composites.Parallel(
+{{ pad }}    name="{{ n.name }}",
+{{ pad }}    policy=py_trees.common.ParallelPolicy.{{ policy }},
+{{ pad }}    children=[
+{% for child in n.children %}
+{{ node(child, indent + 8) }},
+{% endfor %}
+{{ pad }}    ],
+{{ pad }})
+{%- elif n.kind == "condition" %}
+{{ pad }}_check("{{ n.flag }}")
+{%- elif n.kind == "subtree" %}
+{{ pad }}{{ n.tree }}(behaviours, state_machines)
+{%- elif n.kind == "state_machine" %}
+{{ pad }}state_machines["{{ n.fsm }}"]()
+{%- else %}
+{{ pad }}behaviours["{{ n.action }}"]()
+{%- endif %}
+{%- endmacro %}
+{% for tree in data.trees %}
+
+
+def {{ tree.name }}(behaviours, state_machines=None):
+    return (
+{{ node(tree.root, 8) }}
+    )
+{% endfor %}

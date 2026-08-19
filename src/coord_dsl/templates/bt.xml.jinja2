@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- This is an auto-generated file. Do not edit it directly. -->
+{% macro node(n, indent) %}
+{%- set pad = " " * indent %}
+{%- if n.kind == "sequence" %}
+{%- set tag = "Sequence" if n.memory else "ReactiveSequence" %}
+{{ pad }}<{{ tag }} name="{{ n.name }}">
+{% for child in n.children %}
+{{ node(child, indent + 2) }}
+{% endfor %}
+{{ pad }}</{{ tag }}>
+{%- elif n.kind == "selector" %}
+{%- set tag = "Fallback" if n.memory else "ReactiveFallback" %}
+{{ pad }}<{{ tag }} name="{{ n.name }}">
+{% for child in n.children %}
+{{ node(child, indent + 2) }}
+{% endfor %}
+{{ pad }}</{{ tag }}>
+{%- elif n.kind == "parallel" %}
+{{ pad }}<Parallel name="{{ n.name }}" success_count="{{ n.threshold }}" failure_count="{{ n.failure_threshold }}">
+{% for child in n.children %}
+{{ node(child, indent + 2) }}
+{% endfor %}
+{{ pad }}</Parallel>
+{%- elif n.kind == "condition" %}
+{{ pad }}<ScriptCondition name="{{ n.name }}" code="{{ n.flag }} == true"/>
+{%- elif n.kind == "subtree" %}
+{#- flags are event-loop scoped, so a subtree shares the blackboard #}
+{{ pad }}<SubTree ID="{{ n.tree }}" _autoremap="true"/>
+{%- elif n.kind == "state_machine" %}
+{{ pad }}<{{ n.fsm }}/>
+{%- else %}
+{{ pad }}<{{ n.action }} name="{{ n.name }}"/>
+{%- endif %}
+{%- endmacro %}
+<root BTCPP_format="4" main_tree_to_execute="{{ data.entry }}">
+{% for tree in data.trees %}
+  <BehaviorTree ID="{{ tree.name }}">
+{{ node(tree.root, 4) }}
+  </BehaviorTree>
+
+{% endfor %}
+  <TreeNodesModel>
+{% for action in data.actions %}
+    <Action ID="{{ action.name }}"/>
+{% endfor %}
+{% for machine in data.state_machines %}
+    <Action ID="{{ machine.name }}"/>
+{% endfor %}
+  </TreeNodesModel>
+
+  <!-- The model IRI behind each name.
+{% for tree in data.trees %}
+       tree     {{ "%-18s"|format(tree.name) }} {{ tree.uri }}
+{% endfor %}
+{% for action in data.actions %}
+       action   {{ "%-18s"|format(action.name) }} {{ action.uri }}
+{% endfor %}
+{% for flag in data.flags %}
+       flag     {{ "%-18s"|format(flag.name) }} {{ flag.uri }}
+{% endfor %}
+{% for machine in data.state_machines %}
+       fsm      {{ "%-18s"|format(machine.name) }} {{ machine.uri }}
+{% endfor %}
+  -->
+</root>
