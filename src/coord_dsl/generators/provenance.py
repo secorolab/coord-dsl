@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: 2026 SECORO AG (secoro.uni-bremen.de)
 # Author: Vamsi Kalagaturu
-"""PROV-O provenance for generated FSM artifacts, in the shape motion-spec-dsl uses.
+"""PROV-O provenance for generated artifacts, in the shape motion-spec-dsl uses.
 
 Each generator records what it wrote: the source models it read (``prov:used``),
 the artifact it produced (``prov:wasGeneratedBy``) and the tool that did it
