@@ -42,6 +42,11 @@ def get_fsm_graph(model) -> tuple[Graph, URIRef]:
     assert isinstance(fsm, FSM), "Model does not contain an FSM definition"
 
     graph = Graph()
+    add_fsm(graph, fsm)
+    return graph, fsm.uri
+
+
+def add_fsm(graph: Graph, fsm: FSM) -> None:
     add_event_loop(graph=graph, event_loop=fsm.event_loop)
     graph.bind("fsm", NS_MM_FSM)
     graph.bind(fsm.ns_prefix, fsm.namespace)
@@ -96,4 +101,3 @@ def get_fsm_graph(model) -> tuple[Graph, URIRef]:
                 )
             )
 
-    return graph, fsm.uri

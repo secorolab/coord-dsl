@@ -58,7 +58,7 @@ def _local(uri) -> str:
     return split_uri(uri)[1]
 
 
-def _fsm_body(g, fsm_ref, indent, entry=True, awaited=(), colour=None):
+def fsm_body(g, fsm_ref, indent, entry=True, awaited=(), colour=None):
     """The states and the reactions that join them, as dot lines."""
     start = g.value(fsm_ref, URI_FSM_PRED_START_STATE)
     end = g.value(fsm_ref, URI_FSM_PRED_END_STATE)
@@ -113,6 +113,6 @@ def fsm_dot(g, fsm_ref) -> str:
         f'digraph "{_esc(g.value(fsm_ref, URI_FSM_PRED_NAME))}" {{',
         "  rankdir=LR;",
     ] + _HEADER
-    lines += _fsm_body(g, fsm_ref, "  ")
+    lines += fsm_body(g, fsm_ref, "  ")
     lines.append("}")
     return "\n".join(lines) + "\n"

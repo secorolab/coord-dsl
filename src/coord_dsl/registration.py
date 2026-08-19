@@ -116,7 +116,7 @@ def gen_bt_xml_file(metamodel, model, output_path, overwrite, debug, **kwargs):
 def gen_bt_dot_console(metamodel, model, output_path, overwrite, debug, **kwargs):
     del metamodel, output_path, overwrite, debug, kwargs
     g, entry = get_bt_graph(model)
-    print(gen_bt_dot(gen_bt_json(g, entry)), end="")
+    print(gen_bt_dot(gen_bt_json(g, entry), g), end="")
 
 
 def gen_bt_dot_file(metamodel, model, output_path, overwrite, debug, **kwargs):
@@ -134,7 +134,7 @@ def gen_bt_dot_file(metamodel, model, output_path, overwrite, debug, **kwargs):
     if Path(output_path).exists() and not overwrite:
         print(f"not overwriting existing file '{output_path}'")
         return
-    write_dot(gen_bt_dot(gen_bt_json(g, entry)), output_path, img_format)
+    write_dot(gen_bt_dot(gen_bt_json(g, entry), g), output_path, img_format)
     record(model, "dot", output_path)
     print(f"BT drawn at {output_path}")
 

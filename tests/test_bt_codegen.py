@@ -23,9 +23,18 @@ except ImportError:
 
 
 def _ir(name):
+    return _graph_and_ir(name)[1]
+
+
+def _graph_and_ir(name):
     mm = bt_metamodel()
     graph, entry = get_bt_graph(mm.model_from_file(str(MODELS / f"{name}.btree")))
-    return gen_json(graph, entry)
+    return graph, gen_json(graph, entry)
+
+
+def _dot(name):
+    graph, ir = _graph_and_ir(name)
+    return gen_dot(ir, graph)
 
 
 def _kinds(node):
@@ -159,30 +168,34 @@ class BtXmlTest(unittest.TestCase):
 
 class BtDotTest(unittest.TestCase):
     def test_every_tree_gets_a_cluster(self):
-        source = gen_dot(_ir("warehouse"))
+        source = _dot("warehouse")
         for tree in ("warehouse_order", "fetch_item", "go_to_shelf", "reach_shelf"):
             self.assertIn(f'subgraph "cluster_{tree}"', source)
 
     def test_a_subtree_edge_points_at_its_cluster(self):
-        source = gen_dot(_ir("warehouse"))
+        source = _dot("warehouse")
         self.assertIn('lhead="cluster_fetch_item"', source)
 
     def test_the_symbols_are_the_books_and_are_explained(self):
-        source = gen_dot(_ir("warehouse"))
+        source = _dot("warehouse")
         self.assertIn("cluster_legend", source)
         for symbol in ("\u2192", "?", "\u21d2"):  # sequence, fallback, parallel
             self.assertIn(symbol, source)
 
-    def test_a_state_machine_is_drawn_as_itself(self):
-        source = gen_dot(_ir("coordinated_pick"))
-        self.assertIn('"fsm__pick_coordination" [label="pick_coordination"', source)
+    def test_a_state_machine_is_drawn_in_full(self):
+        source = _dot("coordinated_pick")
+        self.assertIn('subgraph "cluster_fsm__pick_coordination"', source)
+        # its states and the events that join them, not a placeholder box
+        self.assertIn("S_PERCEIVE", source)
+        self.assertIn("e_picked", source)
+        self.assertIn('lhead="cluster_fsm__pick_coordination"', source)
 
     @unittest.skipUnless(shutil.which("dot"), "graphviz is not installed")
     def test_graphviz_accepts_the_source(self):
         for model in ("pick", "warehouse", "coordinated_pick"):
             with self.subTest(model=model):
                 out = Path(self.tmp) / f"{model}.svg"
-                write_dot(gen_dot(_ir(model)), out, "svg")
+                write_dot(_dot(model), out, "svg")
                 self.assertTrue(out.stat().st_size > 0)
 
     def setUp(self):

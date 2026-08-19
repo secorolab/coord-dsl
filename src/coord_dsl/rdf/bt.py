@@ -10,9 +10,9 @@ from rdflib.namespace import XSD
 
 from coord_dsl.classes.bt import BehaviourTree
 from coord_dsl.rdf.event_loop import add_event_loop
+from coord_dsl.rdf.fsm import add_fsm
 from coord_dsl.rdf.vocab import (
     NS_MM_BT,
-    NS_MM_FSM,
     URI_BT_PRED_CHILDREN,
     URI_BT_PRED_MEMORY,
     URI_BT_PRED_OF_ACTION,
@@ -24,7 +24,6 @@ from coord_dsl.rdf.vocab import (
     URI_BT_TYPE_SELECTOR,
     URI_BT_TYPE_SEQUENCE,
     URI_BT_TYPE_TREE,
-    URI_FSM_TYPE_FSM,
 )
 
 URL_BT_SHACL = f"{URL_SECORO_MM}/behaviour/behaviour-tree.shacl.ttl"
@@ -42,7 +41,6 @@ def get_bt_graph(model) -> tuple[Graph, URIRef]:
     graph = Graph()
     graph.bind("bt", NS_MM_BT)
     graph.bind("el", NS_MM_EL)
-    graph.bind("fsm", NS_MM_FSM)
     for behaviour_set in model.behaviour_sets:
         graph.bind(behaviour_set.ns_prefix, behaviour_set.namespace)
     for tree in trees:
@@ -65,8 +63,7 @@ def get_bt_graph(model) -> tuple[Graph, URIRef]:
         if node.__class__.__name__ == "Subtree":
             return tree_uri[node.tree]
         if node.__class__.__name__ == "Leaf" and _is_fsm(node.target):
-            graph.add((node.target.uri, RDF.type, URI_FSM_TYPE_FSM))
-            graph.bind(node.target.ns_prefix, node.target.namespace)
+            add_fsm(graph, node.target)
             return node.target.uri
         visit(node, uri)
         return uri

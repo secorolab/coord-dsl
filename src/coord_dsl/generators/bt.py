@@ -10,6 +10,7 @@ from rdf_utils.naming import get_valid_var_name
 from rdflib import RDF, Graph, URIRef
 from rdflib.collection import Collection
 
+from coord_dsl.generators.dot import fsm_body
 from coord_dsl.generators.fsm import local_name
 from coord_dsl.rdf.vocab import (
     URI_BT_PRED_CHILDREN,
@@ -23,6 +24,7 @@ from coord_dsl.rdf.vocab import (
     URI_BT_TYPE_SELECTOR,
     URI_BT_TYPE_SEQUENCE,
     URI_BT_TYPE_TREE,
+    URI_FSM_PRED_START_STATE,
     URI_FSM_TYPE_FSM,
 )
 
@@ -148,11 +150,24 @@ def gen_python_code(ir: dict) -> str:
     return _render("bt.py.jinja2", dict(ir, notes=notes))
 
 
-def gen_dot(ir: dict) -> str:
-    """Generates graphviz source, one cluster per tree."""
+def gen_dot(ir: dict, graph: Graph) -> str:
+    """Generates graphviz source, one cluster per tree and per state machine."""
     roots = {tree["name"]: _node_id(tree["root"]) for tree in ir["trees"]}
+    machines = []
+    for machine in ir["state_machines"]:
+        uri = URIRef(machine["uri"])
+        machines.append(
+            {
+                **machine,
+                "start": str(graph.value(uri, URI_FSM_PRED_START_STATE)),
+                "body": fsm_body(graph, uri, "    ", entry=False),
+            }
+        )
     print(f"Drawing behaviour tree: {ir['entry']}")
-    return _render("bt.dot.jinja2", dict(ir, roots=roots))
+    starts = {machine["name"]: machine["start"] for machine in machines}
+    return _render(
+        "bt.dot.jinja2", dict(ir, roots=roots, machines=machines, starts=starts)
+    )
 
 
 def _node_id(node: dict) -> str:
