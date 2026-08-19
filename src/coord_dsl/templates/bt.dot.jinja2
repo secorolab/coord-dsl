@@ -22,7 +22,7 @@ digraph "{{ data.entry }}" {
 {% for child in n.children %}{{ declare(child, indent) }}
 {% endfor %}
 {%- elif n.kind == "parallel" %}
-{{ pad }}"{{ n.name }}" [label="⇉\n{{ n.threshold }} of {{ n.children|length }}", shape=box, style=filled, fillcolor="#fef7e0"];
+{{ pad }}"{{ n.name }}" [label="⇒\n{{ n.threshold }} of {{ n.children|length }}", shape=box, style=filled, fillcolor="#fef7e0"];
 {% for child in n.children %}{{ declare(child, indent) }}
 {% endfor %}
 {%- elif n.kind == "condition" %}
@@ -42,6 +42,20 @@ digraph "{{ data.entry }}" {
 {% endif %}
 {% endfor %}
 {%- endmacro %}
+
+  subgraph "cluster_legend" {
+    label="legend";
+    style=rounded;
+    color="#dadce0";
+    "__legend__" [shape=plaintext, fillcolor="#ffffff", label="\
+→  sequence\l\
+?  selector\l\
+⇒  parallel, M of N\l\
+◯  condition, a flag\l\
+▭  action\l\
+⬒  state machine\l\
+--> subtree\l"];
+  }
 {% for tree in data.trees %}
 
   subgraph "cluster_{{ tree.name }}" {

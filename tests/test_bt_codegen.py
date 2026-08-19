@@ -167,6 +167,12 @@ class BtDotTest(unittest.TestCase):
         source = gen_dot(_ir("warehouse"))
         self.assertIn('lhead="cluster_fetch_item"', source)
 
+    def test_the_symbols_are_the_books_and_are_explained(self):
+        source = gen_dot(_ir("warehouse"))
+        self.assertIn("cluster_legend", source)
+        for symbol in ("\u2192", "?", "\u21d2"):  # sequence, fallback, parallel
+            self.assertIn(symbol, source)
+
     def test_a_state_machine_is_drawn_as_itself(self):
         source = gen_dot(_ir("coordinated_pick"))
         self.assertIn('"fsm__pick_coordination" [label="pick_coordination"', source)
