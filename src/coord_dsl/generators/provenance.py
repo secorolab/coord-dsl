@@ -10,22 +10,32 @@ document beside the artifacts accumulates -- generating ``xml`` then ``cpp``
 leaves one document describing both, keyed by ``@id``.
 """
 
+import re
 from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
 from rdflib import Graph, Literal, Namespace, URIRef
-from rdflib.namespace import PROV, RDF, XSD
+from rdflib.namespace import DCTERMS, PROV, RDF, XSD
 
 PROV_NS = "https://secorolab.github.io/coord-dsl/provenance/"
 DOCUMENT_NAME = "provenance.ld.json"
 CDPROV = Namespace(PROV_NS)
+# The tool agent and the files are shared concepts, so they are minted in the space
+# motion-spec's prov_uri already uses and this document's nodes for them are the same nodes
+# motion-spec-dsl's document describes. Only the activity and bundle instances stay under
+# cdprov -- which therefore mints no vocabulary at all.
+MSPROV = Namespace("https://secorolab.github.io/motion-spec/provenance/")
+MS_PROV = Namespace("https://secorolab.github.io/metamodels/motion-spec/prov#")
 
-_CONTEXT = ["https://secorolab.github.io/metamodels/prov.json", {"cdprov": PROV_NS}]
+_CONTEXT = [
+    "https://secorolab.github.io/metamodels/prov.json",
+    {"cdprov": PROV_NS, "msprov": str(MSPROV), "ms-prov": str(MS_PROV)},
+]
 
 
 def _slug(value) -> str:
-    return "".join(c if c.isalnum() or c in "_.-" else "_" for c in str(value)).strip("_") or "item"
+    return re.sub(r"[^A-Za-z0-9_.-]+", "_", str(value)).strip("_") or "item"
 
 
 def _tool_version(package: str) -> str | None:
@@ -65,8 +75,8 @@ def record(model, target: str, artifact: Path) -> Path:
         graph.parse(document, format="json-ld")
 
     bundle = CDPROV["bundle/coord-dsl-provenance"]
-    agent = CDPROV["agent/coord_dsl"]
-    artifact_id = CDPROV[f"entity/generated/{_slug(artifact.name)}"]
+    agent = MSPROV["agent/coord_dsl"]
+    artifact_id = MSPROV[f"entity/generated/{_slug(artifact.name)}"]
     for subject in (activity, artifact_id):
         graph.remove((subject, None, None))
     graph.add((bundle, RDF.type, PROV.Bundle))
@@ -74,13 +84,14 @@ def record(model, target: str, artifact: Path) -> Path:
     graph.add((agent, RDF.type, PROV.Agent))
     tool_version = _tool_version("coord_dsl")
     if tool_version:
-        graph.set((agent, CDPROV.version, Literal(tool_version)))
+        graph.set((agent, DCTERMS.hasVersion, Literal(tool_version)))
     graph.add((activity, RDF.type, PROV.Activity))
+    graph.add((activity, RDF.type, MS_PROV.SpecCompilation))
     graph.add((activity, PROV.wasAssociatedWith, agent))
     graph.add((activity, PROV.startedAtTime, Literal(now, datatype=XSD.dateTime)))
     graph.add((activity, PROV.endedAtTime, Literal(now, datatype=XSD.dateTime)))
     for path in sources:
-        source = CDPROV[f"entity/source/{_slug(path.name)}"]
+        source = MSPROV[f"entity/source/{_slug(path.name)}"]
         graph.add((source, RDF.type, PROV.Entity))
         graph.set((source, PROV.atLocation, URIRef(path.as_uri())))
         graph.add((activity, PROV.used, source))
