@@ -23,7 +23,7 @@ DOCUMENT_NAME = "provenance.ld.json"
 CDPROV = Namespace(PROV_NS)
 # The tool agent and the files are shared concepts, so they are minted in the space
 # motion-spec's prov_uri already uses and this document's nodes for them are the same nodes
-# motion-spec-dsl's document describes. Only the activity and bundle instances stay under
+# motion-spec-dsl's document describes. Only the activity instances stay under
 # cdprov -- which therefore mints no vocabulary at all.
 MSPROV = Namespace("https://secorolab.github.io/motion-spec/provenance/")
 MS_PROV = Namespace("https://secorolab.github.io/metamodels/motion-spec/prov#")
@@ -74,12 +74,10 @@ def record(model, target: str, artifact: Path) -> Path:
     if document.exists():
         graph.parse(document, format="json-ld")
 
-    bundle = CDPROV["bundle/coord-dsl-provenance"]
     agent = MSPROV["agent/coord_dsl"]
     artifact_id = MSPROV[f"entity/generated/{_slug(artifact.name)}"]
     for subject in (activity, artifact_id):
         graph.remove((subject, None, None))
-    graph.add((bundle, RDF.type, PROV.Bundle))
     graph.add((agent, RDF.type, PROV.SoftwareAgent))
     graph.add((agent, RDF.type, PROV.Agent))
     tool_version = _tool_version("coord_dsl")
