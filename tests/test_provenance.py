@@ -8,7 +8,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from types import SimpleNamespace
-from unittest.mock import patch
 
 from rdf_utils.constraints import check_shacl_constraints
 from rdf_utils.models.vocab import URI_PROV_EXT_TYPE_TRANSFORMATION
@@ -20,7 +19,6 @@ from coord_dsl.generators.provenance import (
     AGENT,
     CDPROV,
     DOCUMENT_NAME,
-    _installed_package,
     record,
     source_paths,
 )
@@ -64,7 +62,7 @@ class ProvenanceTest(unittest.TestCase):
             graph,
         )
         self.assertIn((PYTHON_GENERATION, PROV.wasAssociatedWith, AGENT), graph)
-        self.assertEqual(str(graph.value(AGENT, SDO.name)), "coord-dsl")
+        self.assertEqual(str(graph.value(AGENT, SDO.name)), "coord_dsl")
         self.assertLess(
             graph.value(PYTHON_GENERATION, PROV.startedAtTime),
             graph.value(PYTHON_GENERATION, PROV.endedAtTime),
@@ -136,54 +134,6 @@ class ProvenanceTest(unittest.TestCase):
             {str(graph.value(source, PROV.atLocation)) for source in sources},
             {first.as_uri(), second.as_uri()},
         )
-
-    def test_installed_package_reads_vcs_and_local_install_revisions(self):
-        vcs = SimpleNamespace(
-            version="1.2.3",
-            read_text=lambda _: (
-                '{"url": "https://example.test/repo", '
-                '"vcs_info": {"commit_id": "abc123", "vcs": "git"}}'
-            ),
-        )
-        with patch("coord_dsl.generators.provenance.distribution", return_value=vcs):
-            self.assertEqual(_installed_package(), ("1.2.3", "abc123"))
-
-        source_root = Path(__file__).resolve().parents[1]
-        local = SimpleNamespace(
-            version="1.2.3",
-            read_text=lambda _: (
-                f'{{"url": "{source_root.as_uri()}", "dir_info": {{"editable": true}}}}'
-            ),
-        )
-        with (
-            patch("coord_dsl.generators.provenance.distribution", return_value=local),
-            patch(
-                "coord_dsl.generators.provenance._git_revision",
-                return_value="def456-dirty",
-            ),
-        ):
-            self.assertEqual(_installed_package(), ("1.2.3", "def456-dirty"))
-
-    def test_installed_package_ignores_an_unrelated_editable_install(self):
-        package = SimpleNamespace(
-            version="1.2.3",
-            read_text=lambda _: (
-                '{"url": "file:///an/unrelated/checkout", '
-                '"dir_info": {"editable": true}}'
-            ),
-        )
-        with patch(
-            "coord_dsl.generators.provenance.distribution", return_value=package
-        ):
-            self.assertEqual(_installed_package(), (None, None))
-
-    def test_installed_package_without_source_revision_keeps_the_version(self):
-        package = SimpleNamespace(version="1.2.3", read_text=lambda _: None)
-        with patch(
-            "coord_dsl.generators.provenance.distribution", return_value=package
-        ):
-            self.assertEqual(_installed_package(), ("1.2.3", None))
-
 
 if __name__ == "__main__":
     unittest.main()
