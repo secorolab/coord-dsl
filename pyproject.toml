@@ -12,7 +12,7 @@ dependencies = [
     "textx_ls_core",
     "jinja2",
     "rdflib>=7.6.0",
-    "rdf_utils @ git+https://github.com/minhnh/rdf-utils.git@main",
+    "rdf_utils",
 ]
 
 [project.optional-dependencies]
