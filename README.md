@@ -95,8 +95,8 @@ compacted context from the graph's namespace manager.
 
 Generated code includes `FSM_URI` and URI tables for states, events,
 transitions, and reactions. File generators also write their provenance to a
-new `provenance.ld.json` beside their output (`provenance-1.ld.json`, ... when
-taken), or to the file `--provenance` names.
+`<output>.prov.ld.json` beside their output, e.g. `model.hpp.prov.ld.json`,
+replaced on each run.
 
 See [examples/models/fsm](examples/models/fsm/) for a complete model and Python
 and C++ controllers.

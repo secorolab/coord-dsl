@@ -119,9 +119,8 @@ namespace manager.
 
 The code targets emit ``create_fsm()``, ``destroy_fsm()`` (C++), the
 state/event/transition/reaction enums, and the IRI tables below. No control loop —
-you own that. Each also writes a new ``provenance.ld.json`` beside the artifact
-(``provenance-1.ld.json``, ... when taken), or the file ``--provenance`` names,
-recording what produced it.
+you own that. Each also writes ``<artifact>.prov.ld.json`` beside the artifact, e.g.
+``ex_fsm.hpp.prov.ld.json``, recording what produced it; a re-run replaces it.
 
 A tool that calls the generator functions itself records a file the same way,
 with ``record(model, path, started)``.

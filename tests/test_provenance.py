@@ -18,7 +18,7 @@ from rdflib.namespace import PROV, RDF, SDO
 
 from coord_dsl.rdf.provenance import (
     AGENT,
-    DOCUMENT_NAME,
+    DOCUMENT_SUFFIX,
     record,
     source_paths,
 )
@@ -37,15 +37,15 @@ class ProvenanceTest(unittest.TestCase):
         self.addCleanup(temporary.cleanup)
         self.directory = Path(temporary.name)
 
-    def document(self) -> Dataset:
+    def document(self, output: Path) -> Dataset:
         return Dataset(default_union=True).parse(
-            self.directory / DOCUMENT_NAME, format="json-ld"
+            output.with_name(f"{output.name}{DOCUMENT_SUFFIX}"), format="json-ld"
         )
 
     def test_generation_is_a_transformation_of_the_model_by_the_package(self):
         output = self.directory / "ex_fsm.py"
         gen_python(None, self.model, output, False, False)
-        graph = self.document()
+        graph = self.document(output)
 
         (entity,) = [
             entity
@@ -66,24 +66,16 @@ class ProvenanceTest(unittest.TestCase):
         )
         check_shacl_constraints(graph, SHAPES)
 
-    def test_each_run_writes_a_new_document_unless_one_is_named(self):
+    def test_each_file_has_one_document_replaced_on_each_run(self):
         output = self.directory / "ex_fsm.py"
-        named = self.directory / "named.ld.json"
         gen_python(None, self.model, output, False, False)
         gen_python(None, self.model, output, False, False)
-        gen_cpp(
-            None,
-            self.model,
-            self.directory / "ex_fsm.hpp",
-            False,
-            False,
-            provenance=named,
-        )
+        gen_cpp(None, self.model, self.directory / "ex_fsm.hpp", False, False)
 
         documents = sorted(self.directory.glob("*.ld.json"))
         self.assertEqual(
             [document.name for document in documents],
-            ["named.ld.json", "provenance-1.ld.json", DOCUMENT_NAME],
+            ["ex_fsm.hpp.prov.ld.json", "ex_fsm.py.prov.ld.json"],
         )
         for document in documents:
             dataset = Dataset().parse(document, format="json-ld")
@@ -92,15 +84,19 @@ class ProvenanceTest(unittest.TestCase):
             ]
             self.assertEqual(len(bundles), 1)
             check_shacl_constraints(Dataset(default_union=True).parse(document), SHAPES)
+        self.assertEqual(
+            set(self.document(output).subjects(PROV.wasGeneratedBy)), {get_ni_iri(output)}
+        )
 
     def test_a_tool_records_a_file_it_wrote(self):
         started = datetime.now(UTC)
         header = self.directory / "ex_fsm.hpp"
         header.write_text("// header\n")
         self.assertEqual(
-            record(self.model, header, started), self.directory / DOCUMENT_NAME
+            record(self.model, header, started),
+            self.directory / "ex_fsm.hpp.prov.ld.json",
         )
-        graph = self.document()
+        graph = self.document(header)
         (activity,) = graph.subjects(RDF.type, URI_PROV_EXT_TYPE_TRANSFORMATION)
         (entity,) = graph.subjects(PROV.wasGeneratedBy, activity)
         self.assertEqual(resolve_location(graph, entity), URIRef(header.as_uri()))
