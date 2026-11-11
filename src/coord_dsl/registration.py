@@ -9,16 +9,15 @@ from uuid import uuid4
 
 from rdf_utils import DatasetFormat
 from rdflib import Dataset, URIRef
-from textx import GeneratorDesc, LanguageDesc, metamodel_from_file
+from textx import GeneratorDesc, LanguageDesc, metamodel_for_language, metamodel_from_file
 from textx.scoping import providers as scoping_providers
 
 from coord_dsl.classes.bt import BehaviourDecl, BehaviourSet, BehaviourTree
 from coord_dsl.classes.event_loop import Event, EventLoop, EventRef, Flag
 from coord_dsl.classes.fsm import FSM, Reaction, State, Transition
+from coord_dsl.generators.bt import RENDERERS as BT_RENDERERS
 from coord_dsl.generators.bt import gen_dot as gen_bt_dot
 from coord_dsl.generators.bt import gen_json as gen_bt_json
-from coord_dsl.generators.bt import gen_python_code as gen_bt_python_code
-from coord_dsl.generators.bt import gen_xml as gen_bt_xml
 from coord_dsl.generators.dot import FORMATS, fsm_dot, write_dot
 from coord_dsl.generators.fsm import RENDERERS, gen_json
 from coord_dsl.rdf.bt import get_bt_graph
@@ -47,6 +46,8 @@ fsm_lang = LanguageDesc(
 
 
 def bt_metamodel():
+    # Built mid-parse of an imported .fsm, it would reset the user classes shared with this one.
+    metamodel_for_language(fsm_lang.name)
     mm = metamodel_from_file(
         BT_GRAMMAR_PATH,
         classes=[EventLoop, Event, Flag, BehaviourSet, BehaviourDecl, BehaviourTree],
@@ -63,46 +64,16 @@ bt_lang = LanguageDesc(
 )
 
 
-def bt_graph_gen_file(metamodel, model, output_path, overwrite, debug, **kwargs):
-    del metamodel, overwrite, debug
-    dataset_format = DatasetFormat(kwargs.get("format", DatasetFormat.JSON_LD))
-    if not output_path:
-        output_path = (
-            Path(model._tx_filename).parent
-            / f"{model.trees[-1].name}.{dataset_format.extension}"
-        )
-    dataset = Dataset()
-    get_bt_graph(model, dataset.graph(URIRef(uuid4().urn)))
-    Path(output_path).write_text(
-        dataset.serialize(
-            format=dataset_format, indent=2, auto_compact="autocompact" in kwargs
-        )
-    )
-    print(f"BT graph generated at {output_path}")
-
-
 def gen_bt_python(metamodel, model, output_path, overwrite, debug, **kwargs):
-    del metamodel, overwrite, debug, kwargs
-    g, entry = get_bt_graph(model)
-    rendered = gen_bt_python_code(gen_bt_json(g, entry))
-    output_path = (
-        output_path or Path(model._tx_filename).parent / f"{model.trees[-1].name}.py"
-    )
-    with open(output_path, "w") as f:
-        f.write(rendered)
-    print(f"BT py_trees code generated at {output_path}")
+    del metamodel, overwrite, debug
+    output_file = gen_code(model, output_path, "python", ".py", **kwargs)
+    print(f"BT py_trees code generated at {output_file}")
 
 
 def gen_bt_xml_file(metamodel, model, output_path, overwrite, debug, **kwargs):
-    del metamodel, overwrite, debug, kwargs
-    g, entry = get_bt_graph(model)
-    rendered = gen_bt_xml(gen_bt_json(g, entry))
-    output_path = (
-        output_path or Path(model._tx_filename).parent / f"{model.trees[-1].name}.xml"
-    )
-    with open(output_path, "w") as f:
-        f.write(rendered)
-    print(f"BT BehaviorTree.CPP XML generated at {output_path}")
+    del metamodel, overwrite, debug
+    output_file = gen_code(model, output_path, "xml", ".xml", **kwargs)
+    print(f"BT BehaviorTree.CPP XML generated at {output_file}")
 
 
 def gen_bt_dot_console(metamodel, model, output_path, overwrite, debug, **kwargs):
@@ -154,12 +125,6 @@ bt_xml_gen = GeneratorDesc(
     description="Generates a BehaviorTree.CPP v4 XML file",
     generator=gen_bt_xml_file,
 )
-bt_file_gen = GeneratorDesc(
-    language="coord_dsl_bt",
-    target="graph",
-    description="Generates a file with the behaviour tree graph in RDF format",
-    generator=bt_graph_gen_file,
-)
 
 
 def graph_gen_console(metamodel, model, output_path, overwrite, debug, **kwargs):
@@ -178,13 +143,15 @@ def graph_gen_console(metamodel, model, output_path, overwrite, debug, **kwargs)
 def graph_gen_file(metamodel, model, output_path, overwrite, debug, **kwargs):
     del metamodel, overwrite, debug
     dataset_format = DatasetFormat(kwargs.get("format", DatasetFormat.JSON_LD))
+    is_bt = hasattr(model, "trees")
+    name = model.trees[-1].name if is_bt else model.fsm.name
     if not output_path:
-        output_path = (
-            Path(model._tx_filename).parent / f"{model.fsm.name}.{dataset_format.extension}"
-        )
+        output_path = Path(model._tx_filename).parent / f"{name}.{dataset_format.extension}"
     dataset = Dataset()
     if "provenance" in kwargs:
         build(model, dataset, *create_coord_dsl_bundle(dataset))
+    elif is_bt:
+        get_bt_graph(model, dataset.graph(URIRef(uuid4().urn)))
     else:
         get_fsm_graph(model, dataset.graph(URIRef(uuid4().urn)))
     Path(output_path).write_text(
@@ -192,7 +159,7 @@ def graph_gen_file(metamodel, model, output_path, overwrite, debug, **kwargs):
             format=dataset_format, indent=2, auto_compact="autocompact" in kwargs
         )
     )
-    print(f"FSM graph generated at {output_path}")
+    print(f"{'BT' if is_bt else 'FSM'} graph generated at {output_path}")
 
 
 def gen_fsm_dot_console(metamodel, model, output_path, overwrite, debug, **kwargs):
@@ -221,11 +188,16 @@ def gen_fsm_dot_file(metamodel, model, output_path, overwrite, debug, **kwargs):
 
 
 def gen_code(model, output_path, target, suffix, **kwargs):
-    name = model.fsm.name
+    is_bt = hasattr(model, "trees")
+    name = model.trees[-1].name if is_bt else model.fsm.name
     output_path = Path(output_path or Path(model._tx_filename).parent / f"{name}{suffix}")
     if "provenance" not in kwargs:
-        graph, fsm_ref = get_fsm_graph(model)
-        output_path.write_text(RENDERERS[target][0](gen_json(graph, fsm_ref)))
+        if is_bt:
+            graph, entry = get_bt_graph(model)
+            output_path.write_text(BT_RENDERERS[target][0](gen_bt_json(graph, entry)))
+        else:
+            graph, fsm_ref = get_fsm_graph(model)
+            output_path.write_text(RENDERERS[target][0](gen_json(graph, fsm_ref)))
         return output_path
     dataset_format = DatasetFormat(kwargs.get("format", DatasetFormat.JSON_LD))
     dataset = Dataset()
@@ -286,4 +258,10 @@ fsm_python_gen = GeneratorDesc(
     target="python",
     description="Generates Python code for the FSM",
     generator=gen_python,
+)
+bt_file_gen = GeneratorDesc(
+    language="coord_dsl_bt",
+    target="graph",
+    description="Generates a file with the behaviour tree graph in RDF format",
+    generator=graph_gen_file,
 )

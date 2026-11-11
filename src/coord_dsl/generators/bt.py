@@ -131,7 +131,7 @@ def gen_json(g: Graph, entry_ref: URIRef) -> dict:
 
 def _render(template_name: str, ir: dict) -> str:
     env = Environment(
-        loader=FileSystemLoader(Path(__file__).parent.parent / "templates"),
+        loader=FileSystemLoader(Path(__file__).parent.parent),
         trim_blocks=True,
         lstrip_blocks=True,
         keep_trailing_newline=True,
@@ -147,7 +147,7 @@ def gen_python_code(ir: dict) -> str:
     for note in notes:
         print(f"  note: {note}")
     print(f"Generating py_trees code for behaviour tree: {ir['entry']}")
-    return _render("bt.py.jinja2", dict(ir, notes=notes))
+    return _render(RENDERERS["python"][1], dict(ir, notes=notes))
 
 
 def gen_dot(ir: dict, graph: Graph) -> str:
@@ -166,7 +166,7 @@ def gen_dot(ir: dict, graph: Graph) -> str:
     print(f"Drawing behaviour tree: {ir['entry']}")
     starts = {machine["name"]: machine["start"] for machine in machines}
     return _render(
-        "bt.dot.jinja2", dict(ir, roots=roots, machines=machines, starts=starts)
+        "templates/bt.dot.jinja2", dict(ir, roots=roots, machines=machines, starts=starts)
     )
 
 
@@ -182,7 +182,13 @@ def _node_id(node: dict) -> str:
 def gen_xml(ir: dict) -> str:
     """Generates a BehaviorTree.CPP v4 XML file."""
     print(f"Generating BehaviorTree.CPP XML for behaviour tree: {ir['entry']}")
-    return _render("bt.xml.jinja2", ir)
+    return _render(RENDERERS["xml"][1], ir)
+
+
+RENDERERS = {
+    "python": (gen_python_code, "templates/bt.py.jinja2"),
+    "xml": (gen_xml, "templates/bt.xml.jinja2"),
+}
 
 
 def _check_py_trees_parallel(node: dict, notes: list) -> None:
