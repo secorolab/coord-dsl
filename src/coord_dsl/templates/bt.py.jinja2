@@ -75,7 +75,7 @@ def _check(flag):
 {{ pad }}    ],
 {{ pad }})
 {%- elif n.kind == "parallel" %}
-{%- set policy = "SuccessOnOne()" if n.threshold == 1 else "SuccessOnAll()" %}
+{%- set policy = "SuccessOnOne()" if n.threshold == 1 else "SuccessOnAll(synchronise=False)" %}
 {{ pad }}py_trees.composites.Parallel(
 {{ pad }}    name="{{ n.name }}",
 {{ pad }}    policy=py_trees.common.ParallelPolicy.{{ policy }},
