@@ -3,7 +3,9 @@
 
 from rdf_utils.models.vocab import (
     URI_EL_PRED_HAS_EVT,
+    URI_EL_PRED_HAS_FLG,
     URI_EL_TYPE_EVT_LOOP,
+    URI_EL_TYPE_FLG,
 )
 from rdf_utils.namespace import NS_MM_EL, URL_SECORO_MM
 from rdflib import RDF, Graph
@@ -23,3 +25,6 @@ def add_event_loop(graph: Graph, event_loop: EventLoop) -> None:
     for event in event_loop.events:
         graph.add((event.uri, RDF.type, TIME.Instant))
         graph.add((event_loop.uri, URI_EL_PRED_HAS_EVT, event.uri))
+    for flag in event_loop.flags:
+        graph.add((flag.uri, RDF.type, URI_EL_TYPE_FLG))
+        graph.add((event_loop.uri, URI_EL_PRED_HAS_FLG, flag.uri))
