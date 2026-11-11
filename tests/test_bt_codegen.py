@@ -49,7 +49,26 @@ class BtIrTest(unittest.TestCase):
         self.assertEqual(ir["entry"], "warehouse_order")
         self.assertEqual(
             [tree["name"] for tree in ir["trees"]],
-            ["fetch_item", "go_to_shelf", "reach_shelf", "warehouse_order"],
+            [
+                "approach_shelf",
+                "carry_item",
+                "check_hardware",
+                "complete_order",
+                "deliver_item",
+                "drive_to_charger",
+                "drive_to_dropoff",
+                "drive_to_shelf",
+                "fetch_item",
+                "find_item",
+                "grasp_item",
+                "keep_charged",
+                "localize_robot",
+                "prepare_robot",
+                "reach_shelf",
+                "ready_arm",
+                "stow_arm",
+                "warehouse_order",
+            ],
         )
 
     def test_a_subtree_is_read_as_the_tree_it_names(self):
@@ -69,18 +88,48 @@ class BtIrTest(unittest.TestCase):
         self.assertEqual(
             {action["name"] for action in ir["actions"]},
             {
+                "run_self_test",
+                "reset_drivers",
+                "localize",
+                "spin_in_place",
+                "dock",
                 "recharge",
-                "drive_to_shelf",
+                "undock",
                 "clear_obstacle",
-                "replan_route",
-                "pick_item",
-                "drive_to_dropoff",
+                "request_help",
+                "scan_shelf",
+                "reposition_camera",
+                "wait_for_dropoff",
                 "place_item",
+                "confirm_order",
+                "report_done",
             },
         )
         self.assertEqual(
             {flag["name"] for flag in ir["flags"]},
-            {"battery_ok", "shelf_reachable", "item_held", "at_dropoff"},
+            {
+                "estop_released",
+                "hardware_ok",
+                "localized",
+                "battery_ok",
+                "docked",
+                "undocked",
+                "shelf_reachable",
+                "item_visible",
+                "dropoff_free",
+                "item_placed",
+                "order_confirmed",
+                "at_charger",
+                "at_shelf",
+                "at_dropoff",
+                "arm_at_pregrasp",
+                "arm_stowed",
+                "item_held",
+            },
+        )
+        self.assertEqual(
+            {machine["name"] for machine in ir["state_machines"]},
+            {"base_navigation", "arm_motion", "gripper"},
         )
 
     def test_parallel_carries_both_thresholds(self):
@@ -169,7 +218,7 @@ class BtXmlTest(unittest.TestCase):
 class BtDotTest(unittest.TestCase):
     def test_every_tree_gets_a_cluster(self):
         source = _dot("warehouse")
-        for tree in ("warehouse_order", "fetch_item", "go_to_shelf", "reach_shelf"):
+        for tree in ("warehouse_order", "fetch_item", "approach_shelf", "reach_shelf"):
             self.assertIn(f'subgraph "cluster_{tree}"', source)
 
     def test_a_subtree_edge_points_at_its_cluster(self):
@@ -240,7 +289,8 @@ class BtPythonTest(unittest.TestCase):
                 return py_trees.common.Status.SUCCESS
 
         behaviours = {n: (lambda n=n: Stub(n)) for n in namespace["ACTION_IRI"]}
-        root = namespace["warehouse_order"](behaviours)
+        machines = {n: (lambda n=n: Stub(n)) for n in namespace["FSM_IRI"]}
+        root = namespace["warehouse_order"](behaviours, machines)
         py_trees.trees.BehaviourTree(root).tick()
         self.assertEqual(root.status, py_trees.common.Status.SUCCESS)
 

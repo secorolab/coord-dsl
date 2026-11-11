@@ -1,0 +1,61 @@
+// Closes the gripper on an item until it holds, reopening and retrying when the grasp slips.
+// Its event loop carries the events this FSM reacts to and the flags a tree reads.
+
+ns gr = "https://secorolab.github.io/models/fsm/gripper/"
+
+evt loop (ns=gr) gripper_events {
+    evt e_start,
+    evt e_contact,
+    evt e_slipped,
+    evt e_reopened,
+    evt e_holding,
+    flg item_held
+}
+
+fsm (ns=gr) gripper {
+    description: "Closes on an item, squeezes until the force holds, reopens on a slip"
+
+    states {
+        S_OPEN,
+        S_CLOSE,
+        S_SQUEEZE,
+        S_REOPEN,
+        S_HOLD
+    }
+
+    evt loop: <gripper_events>
+
+    start: <S_OPEN>
+    end:   <S_HOLD>
+
+    transitions {
+        T_OPEN_CLOSE      { from: <S_OPEN>,    to: <S_CLOSE> },
+        T_CLOSE_SQUEEZE   { from: <S_CLOSE>,   to: <S_SQUEEZE> },
+        T_SQUEEZE_REOPEN  { from: <S_SQUEEZE>, to: <S_REOPEN> },
+        T_REOPEN_CLOSE    { from: <S_REOPEN>,  to: <S_CLOSE> },
+        T_SQUEEZE_HOLD    { from: <S_SQUEEZE>, to: <S_HOLD> }
+    }
+
+    reactions {
+        R_START {
+            when: <gripper_events.e_start>,
+            do:   <T_OPEN_CLOSE>
+        },
+        R_CONTACT {
+            when: <gripper_events.e_contact>,
+            do:   <T_CLOSE_SQUEEZE>
+        },
+        R_SLIPPED {
+            when: <gripper_events.e_slipped>,
+            do:   <T_SQUEEZE_REOPEN>
+        },
+        R_REOPENED {
+            when: <gripper_events.e_reopened>,
+            do:   <T_REOPEN_CLOSE>
+        },
+        R_HOLDING {
+            when: <gripper_events.e_holding>,
+            do:   <T_SQUEEZE_HOLD>
+        }
+    }
+}

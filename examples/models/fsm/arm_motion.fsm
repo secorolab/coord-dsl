@@ -1,0 +1,62 @@
+// Moves the arm to the pose its implementation is given: pregrasp before a pick, stowed to carry.
+// Its event loop carries the events this FSM reacts to and the flags a tree reads.
+
+ns am = "https://secorolab.github.io/models/fsm/arm_motion/"
+
+evt loop (ns=am) arm_motion_events {
+    evt e_start,
+    evt e_trajectory_ready,
+    evt e_collision,
+    evt e_retracted,
+    evt e_pose_reached,
+    flg arm_at_pregrasp,
+    flg arm_stowed
+}
+
+fsm (ns=am) arm_motion {
+    description: "Plans and executes an arm trajectory, retracting and replanning on a collision"
+
+    states {
+        S_IDLE,
+        S_PLAN,
+        S_MOVE,
+        S_RETRACT,
+        S_DONE
+    }
+
+    evt loop: <arm_motion_events>
+
+    start: <S_IDLE>
+    end:   <S_DONE>
+
+    transitions {
+        T_IDLE_PLAN     { from: <S_IDLE>,    to: <S_PLAN> },
+        T_PLAN_MOVE     { from: <S_PLAN>,    to: <S_MOVE> },
+        T_MOVE_RETRACT  { from: <S_MOVE>,    to: <S_RETRACT> },
+        T_RETRACT_PLAN  { from: <S_RETRACT>, to: <S_PLAN> },
+        T_MOVE_DONE     { from: <S_MOVE>,    to: <S_DONE> }
+    }
+
+    reactions {
+        R_START {
+            when: <arm_motion_events.e_start>,
+            do:   <T_IDLE_PLAN>
+        },
+        R_TRAJECTORY_READY {
+            when: <arm_motion_events.e_trajectory_ready>,
+            do:   <T_PLAN_MOVE>
+        },
+        R_COLLISION {
+            when: <arm_motion_events.e_collision>,
+            do:   <T_MOVE_RETRACT>
+        },
+        R_RETRACTED {
+            when: <arm_motion_events.e_retracted>,
+            do:   <T_RETRACT_PLAN>
+        },
+        R_POSE_REACHED {
+            when: <arm_motion_events.e_pose_reached>,
+            do:   <T_MOVE_DONE>
+        }
+    }
+}

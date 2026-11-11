@@ -1,0 +1,63 @@
+// Drives the mobile base to the goal its implementation is given, replanning when blocked.
+// Its event loop carries the events this FSM reacts to and the flags a tree reads.
+
+ns bn = "https://secorolab.github.io/models/fsm/base_navigation/"
+
+evt loop (ns=bn) base_navigation_events {
+    evt e_start,
+    evt e_planned,
+    evt e_blocked,
+    evt e_replanned,
+    evt e_arrived,
+    flg at_charger,
+    flg at_shelf,
+    flg at_dropoff
+}
+
+fsm (ns=bn) base_navigation {
+    description: "Plans a path for the base, drives it, and replans around what blocks it"
+
+    states {
+        S_IDLE,
+        S_PLAN,
+        S_DRIVE,
+        S_RECOVER,
+        S_DONE
+    }
+
+    evt loop: <base_navigation_events>
+
+    start: <S_IDLE>
+    end:   <S_DONE>
+
+    transitions {
+        T_IDLE_PLAN      { from: <S_IDLE>,    to: <S_PLAN> },
+        T_PLAN_DRIVE     { from: <S_PLAN>,    to: <S_DRIVE> },
+        T_DRIVE_RECOVER  { from: <S_DRIVE>,   to: <S_RECOVER> },
+        T_RECOVER_PLAN   { from: <S_RECOVER>, to: <S_PLAN> },
+        T_DRIVE_DONE     { from: <S_DRIVE>,   to: <S_DONE> }
+    }
+
+    reactions {
+        R_START {
+            when: <base_navigation_events.e_start>,
+            do:   <T_IDLE_PLAN>
+        },
+        R_PLANNED {
+            when: <base_navigation_events.e_planned>,
+            do:   <T_PLAN_DRIVE>
+        },
+        R_BLOCKED {
+            when: <base_navigation_events.e_blocked>,
+            do:   <T_DRIVE_RECOVER>
+        },
+        R_REPLANNED {
+            when: <base_navigation_events.e_replanned>,
+            do:   <T_RECOVER_PLAN>
+        },
+        R_ARRIVED {
+            when: <base_navigation_events.e_arrived>,
+            do:   <T_DRIVE_DONE>
+        }
+    }
+}

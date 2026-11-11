@@ -1,59 +1,232 @@
-// Fetch an order, recovering when the shelf is not reachable.
+// Fulfil a warehouse order with a mobile manipulator: prepare the robot, keep it charged, fetch
+// the item, deliver it and confirm the order, stopping whenever the emergency stop is pressed.
+// Three state machines run under the tree: the base and the arm in parallel while approaching
+// the shelf and while carrying the item, and the gripper while grasping it.
+
+import "../fsm/base_navigation.fsm"
+import "../fsm/arm_motion.fsm"
+import "../fsm/gripper.fsm"
 
 ns wh = "https://secorolab.github.io/models/bt/warehouse/"
 
 evt loop (ns=wh) monitors {
+    flg estop_released,
+    flg hardware_ok,
+    flg localized,
     flg battery_ok,
+    flg docked,
+    flg undocked,
     flg shelf_reachable,
-    flg item_held,
-    flg at_dropoff
+    flg item_visible,
+    flg dropoff_free,
+    flg item_placed,
+    flg order_confirmed
 }
 
 behaviours (ns=wh) warehouse_behaviours {
+    action run_self_test,
+    action reset_drivers,
+    action localize,
+    action spin_in_place,
+    action dock,
     action recharge,
-    action drive_to_shelf,
+    action undock,
     action clear_obstacle,
-    action replan_route,
-    action pick_item,
-    action drive_to_dropoff,
-    action place_item
+    action request_help,
+    action scan_shelf,
+    action reposition_camera,
+    action wait_for_dropoff,
+    action place_item,
+    action confirm_order,
+    action report_done
 }
 
-btree (ns=wh) reach_shelf {
-    selector {
-        condition <monitors.shelf_reachable>,
-        <warehouse_behaviours.clear_obstacle>,
-        <warehouse_behaviours.replan_route>
+btree (ns=wh) check_hardware {
+    selector (memory=true) {
+        condition <monitors.hardware_ok>,
+        sequence (memory=true) {
+            <warehouse_behaviours.run_self_test>,
+            condition <monitors.hardware_ok>
+        },
+        sequence (memory=true) {
+            <warehouse_behaviours.reset_drivers>,
+            <warehouse_behaviours.run_self_test>,
+            condition <monitors.hardware_ok>
+        }
     }
 }
 
-btree (ns=wh) go_to_shelf {
+btree (ns=wh) localize_robot {
+    selector (memory=true) {
+        condition <monitors.localized>,
+        sequence (memory=true) {
+            <warehouse_behaviours.localize>,
+            condition <monitors.localized>
+        },
+        sequence (memory=true) {
+            <warehouse_behaviours.spin_in_place>,
+            <warehouse_behaviours.localize>,
+            condition <monitors.localized>
+        }
+    }
+}
+
+btree (ns=wh) prepare_robot {
+    sequence {
+        subtree <check_hardware>,
+        subtree <localize_robot>
+    }
+}
+
+btree (ns=wh) drive_to_charger {
+    selector {
+        condition <base_navigation_events.at_charger>,
+        <base_navigation>
+    }
+}
+
+btree (ns=wh) keep_charged {
+    selector {
+        sequence {
+            condition <monitors.battery_ok>,
+            condition <monitors.undocked>
+        },
+        sequence (memory=true) {
+            selector {
+                condition <monitors.docked>,
+                sequence (memory=true) {
+                    subtree <drive_to_charger>,
+                    <warehouse_behaviours.dock>
+                }
+            },
+            <warehouse_behaviours.recharge>,
+            <warehouse_behaviours.undock>,
+            condition <monitors.undocked>
+        }
+    }
+}
+
+btree (ns=wh) reach_shelf {
+    selector (memory=true) {
+        condition <monitors.shelf_reachable>,
+        <warehouse_behaviours.clear_obstacle>,
+        <warehouse_behaviours.request_help>
+    }
+}
+
+btree (ns=wh) drive_to_shelf {
+    selector {
+        condition <base_navigation_events.at_shelf>,
+        <base_navigation>
+    }
+}
+
+btree (ns=wh) ready_arm {
+    selector {
+        condition <arm_motion_events.arm_at_pregrasp>,
+        <arm_motion>
+    }
+}
+
+btree (ns=wh) approach_shelf {
     sequence (memory=true) {
         subtree <reach_shelf>,
-        <warehouse_behaviours.drive_to_shelf>
+        parallel (threshold=2) {
+            subtree <drive_to_shelf>,
+            subtree <ready_arm>
+        }
+    }
+}
+
+btree (ns=wh) find_item {
+    selector (memory=true) {
+        condition <monitors.item_visible>,
+        sequence (memory=true) {
+            <warehouse_behaviours.scan_shelf>,
+            condition <monitors.item_visible>
+        },
+        sequence (memory=true) {
+            <warehouse_behaviours.reposition_camera>,
+            <warehouse_behaviours.scan_shelf>,
+            condition <monitors.item_visible>
+        }
+    }
+}
+
+btree (ns=wh) grasp_item {
+    selector {
+        condition <gripper_events.item_held>,
+        <gripper>
     }
 }
 
 btree (ns=wh) fetch_item {
-    sequence (memory=true) {
-        subtree <go_to_shelf>,
-        <warehouse_behaviours.pick_item>,
-        condition <monitors.item_held>
+    selector {
+        condition <monitors.item_placed>,
+        condition <gripper_events.item_held>,
+        sequence (memory=true) {
+            subtree <approach_shelf>,
+            subtree <find_item>,
+            subtree <grasp_item>
+        }
+    }
+}
+
+btree (ns=wh) drive_to_dropoff {
+    selector {
+        condition <base_navigation_events.at_dropoff>,
+        <base_navigation>
+    }
+}
+
+btree (ns=wh) stow_arm {
+    selector {
+        condition <arm_motion_events.arm_stowed>,
+        <arm_motion>
+    }
+}
+
+btree (ns=wh) carry_item {
+    parallel (threshold=3) {
+        subtree <drive_to_dropoff>,
+        subtree <stow_arm>,
+        condition <gripper_events.item_held>
+    }
+}
+
+btree (ns=wh) deliver_item {
+    selector {
+        condition <monitors.item_placed>,
+        sequence (memory=true) {
+            subtree <carry_item>,
+            selector {
+                condition <monitors.dropoff_free>,
+                <warehouse_behaviours.wait_for_dropoff>
+            },
+            <warehouse_behaviours.place_item>,
+            condition <monitors.item_placed>
+        }
+    }
+}
+
+btree (ns=wh) complete_order {
+    selector {
+        condition <monitors.order_confirmed>,
+        sequence (memory=true) {
+            <warehouse_behaviours.confirm_order>,
+            condition <monitors.order_confirmed>
+        }
     }
 }
 
 btree (ns=wh) warehouse_order {
-    selector {
-        sequence {
-            condition <monitors.battery_ok>,
-            subtree <fetch_item>,
-            parallel (threshold=2) {
-                <warehouse_behaviours.drive_to_dropoff>,
-                condition <monitors.item_held>
-            },
-            condition <monitors.at_dropoff>,
-            <warehouse_behaviours.place_item>
-        },
-        <warehouse_behaviours.recharge>
+    sequence {
+        condition <monitors.estop_released>,
+        subtree <prepare_robot>,
+        subtree <keep_charged>,
+        subtree <fetch_item>,
+        subtree <deliver_item>,
+        subtree <complete_order>,
+        <warehouse_behaviours.report_done>
     }
 }

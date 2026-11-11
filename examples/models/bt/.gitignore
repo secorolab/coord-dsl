@@ -12,4 +12,9 @@ build
 /coordinated_pick.py
 /coordinated_pick.ttl
 /coordinated_pick.xml
+/pick_coordination.py
+/base_navigation.py
+/arm_motion.py
+/gripper.py
+/__pycache__/
 /provenance.ld.json
