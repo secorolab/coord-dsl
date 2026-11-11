@@ -1,17 +1,18 @@
 [project]
 name = "coord_dsl"
-version = "0.1.0"
+dynamic = ["version"]
 description = "A Domain-Specific Language (DSL) to execute simple coordination models."
 authors = [{ name = "", email = "vamsi.kalagautur@uni-bremen.de" }]
 license = { text = "MIT" }
 keywords = [""]
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 dependencies = [
     "textX>=4.1.0",
     "textx_ls_core",
     "jinja2",
-    "rdflib",
+    "rdflib>=7.6.0",
+    "rdf_utils",
 ]
 
 [project.optional-dependencies]
@@ -21,37 +22,31 @@ docs = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/secorolab/coord-dsl.git"
+"Homepage" = "https://github.com/secorolab/coord-dsl"
 
-[tool.setuptools]
-package-dir = {"" = "src"}
-include-package-data = true
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.hatch.version]
+source = "vcs"
 
-[tool.setuptools.package-data]
-"coord_dsl" = [
-    "metamodels/*.tx",
-    "templates/*.jinja2"
-]
-
-[project.entry-points."textx_languages"]
-"fsm" = "coord_dsl.registration:fsm_lang"
-"bt" = "coord_dsl.registration:bt_lang"
+[project.entry-points.textx_languages]
+fsm = "coord_dsl.registration:fsm_lang"
+bt = "coord_dsl.registration:bt_lang"
 
 [project.entry-points."textx_generators"]
-"fsm_graph_console" = "coord_dsl.registration:fsm_console_gen"
-"fsm_graph_file" = "coord_dsl.registration:fsm_file_gen"
-"fsm_dot" = "coord_dsl.registration:fsm_dot_gen"
-"fsm_dot_console" = "coord_dsl.registration:fsm_dot_console_gen"
-"fsm_cpp" = "coord_dsl.registration:fsm_cpp_gen"
-"fsm_python" = "coord_dsl.registration:fsm_python_gen"
-"bt_graph" = "coord_dsl.registration:bt_file_gen"
-"bt_python" = "coord_dsl.registration:bt_python_gen"
-"bt_xml" = "coord_dsl.registration:bt_xml_gen"
-"bt_dot" = "coord_dsl.registration:bt_dot_gen"
-"bt_dot_console" = "coord_dsl.registration:bt_dot_console_gen"
+fsm_graph_console = "coord_dsl.registration:fsm_console_gen"
+fsm_graph_file = "coord_dsl.registration:fsm_file_gen"
+fsm_dot = "coord_dsl.registration:fsm_dot_gen"
+fsm_dot_console = "coord_dsl.registration:fsm_dot_console_gen"
+fsm_cpp = "coord_dsl.registration:fsm_cpp_gen"
+fsm_python = "coord_dsl.registration:fsm_python_gen"
+bt_graph = "coord_dsl.registration:bt_file_gen"
+bt_python = "coord_dsl.registration:bt_python_gen"
+bt_xml = "coord_dsl.registration:bt_xml_gen"
+bt_dot = "coord_dsl.registration:bt_dot_gen"
+bt_dot_console = "coord_dsl.registration:bt_dot_console_gen"
 
 [ruff]
 line-length = 100

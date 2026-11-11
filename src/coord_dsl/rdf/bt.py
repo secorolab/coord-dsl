@@ -2,6 +2,8 @@
 # SPDX-FileCopyrightText: 2026 SECORO AG (secoro.uni-bremen.de)
 """RDF generation for behaviour trees."""
 
+from uuid import uuid4
+
 from rdf_utils.models.vocab import URI_EL_PRED_REF_FLG, URI_EL_TYPE_FLG
 from rdf_utils.namespace import NS_MM_EL, URL_SECORO_MM
 from rdflib import RDF, BNode, Graph, Literal, URIRef
@@ -33,12 +35,13 @@ def _is_fsm(target) -> bool:
     return target.__class__.__name__ == "FSM"
 
 
-def get_bt_graph(model) -> tuple[Graph, URIRef]:
+def get_bt_graph(model, graph: Graph | None = None) -> tuple[Graph, URIRef]:
     """Build the tree graph; the entry tree is the last one declared."""
     trees = getattr(model, "trees", [])
     assert trees, "Model does not contain a behaviour tree"
 
-    graph = Graph()
+    if graph is None:
+        graph = Graph(identifier=URIRef(uuid4().urn))
     graph.bind("bt", NS_MM_BT)
     graph.bind("el", NS_MM_EL)
     for behaviour_set in model.behaviour_sets:

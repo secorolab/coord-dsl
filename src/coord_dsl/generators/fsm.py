@@ -6,6 +6,8 @@ from jinja2 import Environment, FileSystemLoader
 from os.path import basename
 from pathlib import Path
 from rdflib import Graph, URIRef
+from rdf_utils.collection import load_list_re
+from rdf_utils.constraints import ConstraintViolation
 from rdf_utils.models.vocab import (
     URI_EL_PRED_EVT_LOOP,
     URI_EL_PRED_HAS_EVT,
@@ -89,9 +91,11 @@ def gen_json(g: Graph, fsm_ref: URIRef) -> dict:
         )
 
     reactions_table = []
-    for _, _, rx_uri in g.triples((fsm_ref, URI_FSM_PRED_REACTIONS, None)):
+    for rx_uri in load_list_re(g, g.value(fsm_ref, URI_FSM_PRED_REACTIONS)):
         assert isinstance(rx_uri, URIRef)
         uri_s = rx_uri.toPython()
+        if any(reaction["uri"] == uri_s for reaction in reactions_table):
+            raise ConstraintViolation("fsm", f"Reaction '{uri_s}' is listed more than once.")
         when_event_node = g.value(rx_uri, URI_EL_PRED_REF_EVT)
         assert isinstance(when_event_node, URIRef)
         when_event = get_valid_var_name(local_name(when_event_node.toPython())).upper()
@@ -139,8 +143,8 @@ def gen_cpp_header(ir: dict):
 
     # get module path
     module_path = Path(__file__).parent.parent
-    env = Environment(loader=FileSystemLoader(module_path / "templates"))
-    template = env.get_template("fsm.hpp.jinja2")
+    env = Environment(loader=FileSystemLoader(module_path))
+    template = env.get_template(RENDERERS["cpp"][1])
 
     output = template.render(
         {
@@ -158,8 +162,8 @@ def gen_python_code(ir: dict):
 
     # get module path
     module_path = Path(__file__).parent.parent
-    env = Environment(loader=FileSystemLoader(module_path / "templates"))
-    template = env.get_template("fsm.py.jinja2")
+    env = Environment(loader=FileSystemLoader(module_path))
+    template = env.get_template(RENDERERS["python"][1])
 
     output = template.render(
         {
@@ -168,3 +172,9 @@ def gen_python_code(ir: dict):
     )
 
     return output
+
+
+RENDERERS = {
+    "cpp": (gen_cpp_header, "templates/fsm.hpp.jinja2"),
+    "python": (gen_python_code, "templates/fsm.py.jinja2"),
+}
