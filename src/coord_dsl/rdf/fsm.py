@@ -47,6 +47,11 @@ def get_fsm_graph(model, graph: Graph | None = None) -> tuple[Graph, URIRef]:
 
     if graph is None:
         graph = Graph(identifier=URIRef(uuid4().urn))
+    add_fsm(graph, fsm)
+    return graph, fsm.uri
+
+
+def add_fsm(graph: Graph, fsm: FSM) -> None:
     add_event_loop(graph=graph, event_loop=fsm.event_loop)
     graph.bind("fsm", NS_MM_FSM)
     graph.bind(fsm.ns_prefix, fsm.namespace)
@@ -105,5 +110,3 @@ def get_fsm_graph(model, graph: Graph | None = None) -> tuple[Graph, URIRef]:
     add_node_list_pred(
         graph, fsm.uri, URI_FSM_PRED_REACTIONS, [reaction.uri for reaction in fsm.reactions]
     )
-
-    return graph, fsm.uri

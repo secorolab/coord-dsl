@@ -33,6 +33,7 @@ source = "vcs"
 
 [project.entry-points.textx_languages]
 fsm = "coord_dsl.registration:fsm_lang"
+bt = "coord_dsl.registration:bt_lang"
 
 [project.entry-points."textx_generators"]
 fsm_graph_console = "coord_dsl.registration:fsm_console_gen"
@@ -41,6 +42,7 @@ fsm_dot = "coord_dsl.registration:fsm_dot_gen"
 fsm_dot_console = "coord_dsl.registration:fsm_dot_console_gen"
 fsm_cpp = "coord_dsl.registration:fsm_cpp_gen"
 fsm_python = "coord_dsl.registration:fsm_python_gen"
+bt_graph = "coord_dsl.registration:bt_file_gen"
 
 [ruff]
 line-length = 100

@@ -1,0 +1,29 @@
+// Ticks a state machine as a node, under a flag check.
+
+import "../fsm/pick_coordination.fsm"
+
+ns cp = "https://secorolab.github.io/models/bt/coordinated_pick/"
+
+behaviours (ns=cp) pick_behaviours {
+    action approach,
+    action lift
+}
+
+btree (ns=cp) run_coordination {
+    selector {
+        condition <pick_coordination_events.object_grasped>,
+        <pick_coordination>
+    }
+}
+
+btree (ns=cp) coordinated_pick {
+    sequence (memory=true) {
+        condition <pick_coordination_events.object_visible>,
+        <pick_behaviours.approach>,
+        subtree <run_coordination>,
+        parallel (threshold=2) {
+            <pick_behaviours.lift>,
+            condition <pick_coordination_events.object_grasped>
+        }
+    }
+}

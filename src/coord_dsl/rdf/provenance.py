@@ -3,11 +3,12 @@
 # Author: Vamsi Kalagaturu
 """The generation steps of coord-dsl, each recording itself in a bundle in the dataset it is given.
 
-``build`` turns a model into an FSM graph, and ``render`` turns that graph and a template into
-code. Both work in one ``Dataset``: the FSM graph and the ``prov:Bundle`` are named graphs in it,
-and each step adds itself to the bundle as a ``prov-ext:Transformation`` associated with the
-package, which the caller states in the bundle first. Files are named by their location, with the
-hash of their bytes as ``dcterms:identifier``. Neither step writes the dataset.
+``build`` turns a state-machine or behaviour-tree model into its graph, and ``render`` turns that
+graph and a template into code. Both work in one ``Dataset``: the model graph and the
+``prov:Bundle`` are named graphs in it, and each step adds itself to the bundle as a
+``prov-ext:Transformation`` associated with the package, which the caller states in the bundle
+first. Files are named by their location, with the hash of their bytes as ``dcterms:identifier``.
+Neither step writes the dataset.
 
 The package, named by its purl, is the agent, though PROV-DM 2.2.1.1 defines a software agent as
 running software.
@@ -24,16 +25,19 @@ from rdf_utils.models.prov import (
     add_file_entity,
     add_file_hash,
     create_bundle,
+    get_file_path,
     get_git_info,
     get_py_pkg_info,
     load_pkg_prov,
     load_transformation_prov,
 )
+from rdf_utils.models.textx import add_model_prov
 from rdf_utils.models.time import add_wall_instant
 from rdflib import RDF, Dataset, Graph, Literal, URIRef
 from rdflib.namespace import SDO
 
 from coord_dsl.generators.fsm import RENDERERS, gen_json
+from coord_dsl.rdf.bt import get_bt_graph
 from coord_dsl.rdf.fsm import get_fsm_graph
 from coord_dsl.rdf.vocab import URI_FSM_TYPE_FSM
 
@@ -73,35 +77,40 @@ def build(
     agent_id: URIRef,
     graph_id: URIRef | None = None,
 ) -> URIRef:
-    """Build the FSM graph of a model in a dataset and add how it was made to a bundle.
+    """Build the graph of a model in a dataset and add how it was made to a bundle.
 
     Parameters:
-        model: the textX model, loaded from a file; that file is the source
-        dataset: the dataset holding the FSM graph and the bundle
+        model: the textX state-machine or behaviour-tree model, loaded from a file; that file
+            and every model it imports are the sources
+        dataset: the dataset holding the model graph and the bundle
         bundle_id: the `prov:Bundle` in the dataset to record in
         agent_id: the coord_dsl package, stated in the bundle with `load_pkg_prov`
-        graph_id: the FSM graph to build into; a new `urn:uuid:` when None
+        graph_id: the graph to build into; a new `urn:uuid:` when None
 
     Returns:
-        The IRI of the FSM graph
+        The IRI of the model graph
     """
     graph_id = URIRef(uuid4().urn) if graph_id is None else graph_id
     bundle = dataset.graph(bundle_id)
     started_at = datetime.now(UTC)
-    source = Path(model._tx_filename).resolve()
-    get_fsm_graph(model, dataset.graph(graph_id))
+    if hasattr(model, "trees"):
+        get_bt_graph(model, dataset.graph(graph_id))
+    else:
+        get_fsm_graph(model, dataset.graph(graph_id))
     ended_at = datetime.now(UTC)
 
-    source_id = add_file_entity(bundle, add_directory_location(bundle, source.parent), source.name)
-    add_file_hash(bundle, source_id)
-    commit, repository, _, dirty = get_git_info(source)
-    if commit is not None:
-        bundle.add((source_id, SDO.identifier, Literal(f"{commit}-dirty" if dirty else commit)))
-    if repository is not None:
-        bundle.add((source_id, SDO.codeRepository, URIRef(repository)))
+    source_ids = add_model_prov(bundle, model)
+    for source_id in source_ids:
+        path = get_file_path(bundle, source_id)
+        assert path is not None, f"source '{source_id}' has no location"
+        commit, repository, _, dirty = get_git_info(path)
+        if commit is not None:
+            bundle.add((source_id, SDO.identifier, Literal(f"{commit}-dirty" if dirty else commit)))
+        if repository is not None:
+            bundle.add((source_id, SDO.codeRepository, URIRef(repository)))
     activity = URIRef(uuid4().urn)
     _add_transformation(
-        bundle, agent_id, activity, [source_id], [graph_id], started_at, ended_at
+        bundle, agent_id, activity, sorted(source_ids), [graph_id], started_at, ended_at
     )
     return graph_id
 

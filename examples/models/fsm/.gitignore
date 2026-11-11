@@ -1,4 +1,6 @@
 build
 /ex_fsm.*
 /example.png
+/pick_coordination.*
+!/pick_coordination.fsm
 /provenance.ld.json

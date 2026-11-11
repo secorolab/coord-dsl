@@ -1,0 +1,32 @@
+// Pick an object, monitoring the grasp while lifting.
+
+ns ex = "https://secorolab.github.io/models/bt/pick/"
+
+evt loop (ns=ex) monitors {
+    flg object_visible,
+    flg object_grasped
+}
+
+behaviours (ns=ex) pick_behaviours {
+    action approach,
+    action grasp,
+    action lift
+}
+
+btree (ns=ex) approach_object {
+    sequence {
+        condition <monitors.object_visible>,
+        <pick_behaviours.approach>
+    }
+}
+
+btree (ns=ex) pick {
+    sequence (memory=true) {
+        subtree <approach_object>,
+        <pick_behaviours.grasp>,
+        parallel (threshold=2) {
+            <pick_behaviours.lift>,
+            condition <monitors.object_grasped>
+        }
+    }
+}

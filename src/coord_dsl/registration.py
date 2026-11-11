@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # SPDX-FileCopyrightText: 2026 SECORO AG (secoro.uni-bremen.de)
 # Author: Vamsi Kalagaturu
-"""textX registration and generators for finite-state-machine models."""
+"""textX registration and generators for coordination models."""
 
 from importlib.resources import files
 from pathlib import Path
@@ -9,23 +9,31 @@ from uuid import uuid4
 
 from rdf_utils import DatasetFormat
 from rdflib import Dataset, URIRef
-from textx import GeneratorDesc, LanguageDesc, metamodel_from_file
+from textx import (
+    GeneratorDesc,
+    LanguageDesc,
+    metamodel_for_language,
+    metamodel_from_file,
+)
 from textx.scoping import providers as scoping_providers
 
-from coord_dsl.classes.event_loop import Event, EventLoop, EventRef
+from coord_dsl.classes.bt import BehaviourDecl, BehaviourSet, BehaviourTree
+from coord_dsl.classes.event_loop import Event, EventLoop, EventRef, Flag
 from coord_dsl.classes.fsm import FSM, Reaction, State, Transition
 from coord_dsl.generators.dot import FORMATS, fsm_dot, write_dot
 from coord_dsl.generators.fsm import RENDERERS, gen_json
+from coord_dsl.rdf.bt import get_bt_graph
 from coord_dsl.rdf.fsm import get_fsm_graph
 from coord_dsl.rdf.provenance import build, create_coord_dsl_bundle, render
 
 GRAMMAR_PATH = str(files("coord_dsl.metamodels").joinpath("fsm.tx"))
+BT_GRAMMAR_PATH = str(files("coord_dsl.metamodels").joinpath("bt.tx"))
 
 
 def fsm_metamodel():
     mm = metamodel_from_file(
         GRAMMAR_PATH,
-        classes=[EventLoop, Event, EventRef, State, Transition, Reaction, FSM],
+        classes=[EventLoop, Event, Flag, EventRef, State, Transition, Reaction, FSM],
     )
     mm.register_scope_providers({"*.*": scoping_providers.FQNImportURI()})
     return mm
@@ -36,6 +44,25 @@ fsm_lang = LanguageDesc(
     pattern="*.fsm",
     description="Finite State Machine DSL",
     metamodel=fsm_metamodel,
+)
+
+
+def bt_metamodel():
+    # Built mid-parse of an imported .fsm, it would reset the user classes shared with this one.
+    metamodel_for_language(fsm_lang.name)
+    mm = metamodel_from_file(
+        BT_GRAMMAR_PATH,
+        classes=[EventLoop, Event, Flag, BehaviourSet, BehaviourDecl, BehaviourTree],
+    )
+    mm.register_scope_providers({"*.*": scoping_providers.FQNImportURI()})
+    return mm
+
+
+bt_lang = LanguageDesc(
+    name="coord_dsl_bt",
+    pattern="*.btree",
+    description="Behaviour Tree DSL",
+    metamodel=bt_metamodel,
 )
 
 
@@ -55,13 +82,15 @@ def graph_gen_console(metamodel, model, output_path, overwrite, debug, **kwargs)
 def graph_gen_file(metamodel, model, output_path, overwrite, debug, **kwargs):
     del metamodel, overwrite, debug
     dataset_format = DatasetFormat(kwargs.get("format", DatasetFormat.JSON_LD))
+    is_bt = hasattr(model, "trees")
+    name = model.trees[-1].name if is_bt else model.fsm.name
     if not output_path:
-        output_path = (
-            Path(model._tx_filename).parent / f"{model.fsm.name}.{dataset_format.extension}"
-        )
+        output_path = Path(model._tx_filename).parent / f"{name}.{dataset_format.extension}"
     dataset = Dataset()
     if "provenance" in kwargs:
         build(model, dataset, *create_coord_dsl_bundle(dataset))
+    elif is_bt:
+        get_bt_graph(model, dataset.graph(URIRef(uuid4().urn)))
     else:
         get_fsm_graph(model, dataset.graph(URIRef(uuid4().urn)))
     Path(output_path).write_text(
@@ -69,7 +98,7 @@ def graph_gen_file(metamodel, model, output_path, overwrite, debug, **kwargs):
             format=dataset_format, indent=2, auto_compact="autocompact" in kwargs
         )
     )
-    print(f"FSM graph generated at {output_path}")
+    print(f"{'BT' if is_bt else 'FSM'} graph generated at {output_path}")
 
 
 def gen_fsm_dot_console(metamodel, model, output_path, overwrite, debug, **kwargs):
@@ -163,4 +192,10 @@ fsm_python_gen = GeneratorDesc(
     target="python",
     description="Generates Python code for the FSM",
     generator=gen_python,
+)
+bt_file_gen = GeneratorDesc(
+    language="coord_dsl_bt",
+    target="graph",
+    description="Generates a file with the behaviour tree graph in RDF format",
+    generator=graph_gen_file,
 )
